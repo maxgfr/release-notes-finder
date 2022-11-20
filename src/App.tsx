@@ -12,8 +12,8 @@ import {
   TabPanels,
   Tabs,
   Badge,
-  HStack,
   Text,
+  Heading,
 } from "@chakra-ui/react";
 import { ColorModeSwitcher } from "./ColorModeSwitcher";
 import { GithubReleaseTag, TabInformation } from "./types";
@@ -127,11 +127,15 @@ export const App = () => {
 
   return (
     <Box display="flex" flexDirection="column" minH="100vh" p={3}>
-      <ColorModeSwitcher alignSelf="flex-end" />
+      <Box display="flex" flexDirection="row" justifyContent="space-between">
+        <Box />
+        <Heading textAlign="center">Release notes finder</Heading>
+        <ColorModeSwitcher />
+      </Box>
       <Box display="flex" flexDirection="column" alignItems="center">
-        <Image src="icon.svg" width="40" height="40" />
+        <Image src="icon.svg" width="120px" height="120px" />
         <Input
-          placeholder="The npm package name (e.g. react, react-native, etc.)"
+          placeholder="NPM package name (e.g. react, react-native, etc.)"
           value={libName}
           onChange={e => setLibName(e.target.value)}
           maxWidth="500px"
@@ -182,7 +186,7 @@ export const App = () => {
               <TabPanel>
                 <Box display="flex" flexDirection="column">
                   <Input
-                    placeholder="Search a specific version"
+                    placeholder="Version"
                     value={filter}
                     onChange={e => onChangeFilter(e.target.value)}
                   />
