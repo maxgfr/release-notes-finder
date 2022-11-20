@@ -7,6 +7,7 @@ import {
   Input,
   Button,
   Link,
+  Spinner,
 } from "@chakra-ui/react";
 import { ColorModeSwitcher } from "./ColorModeSwitcher";
 import { GithubReleaseTag } from "./types";
@@ -106,6 +107,7 @@ export const App = () => {
             Search
           </Button>
         </VStack>
+        {isFetching && <Spinner/>}
         <ReactMarkdown
           components={ChakraUIRenderer()}
           children={npmReadme ?? ""}
