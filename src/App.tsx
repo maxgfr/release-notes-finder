@@ -25,6 +25,8 @@ export const App = () => {
   const [isFetching, setIsFetching] = React.useState<boolean>(false);
   const [filteredVersion, setFilteredVersion] = React.useState<string[]>([]);
   const [filter, setFilter] = React.useState<string>("");
+  const [hasErrorSearch, setHasErrorSearch] = React.useState<boolean>(false);
+  const [hasErrorGithub, setHasErrorGithub] = React.useState<boolean>(false);
 
   const resetAll = () => {
     setGithubInformation(null);
@@ -34,6 +36,7 @@ export const App = () => {
     setVersions([]);
     setFilteredVersion([]);
     setFilter("");
+    setHasErrorSearch(false);
   };
 
   const onSearch = () => {
@@ -64,6 +67,7 @@ export const App = () => {
       })
       .catch(err => {
         console.error(err);
+        setHasErrorSearch(true);
       })
       .finally(() => {
         setIsFetching(false);
@@ -81,6 +85,7 @@ export const App = () => {
       })
       .catch(err => {
         console.error(err);
+        setHasErrorGithub(true);
       })
       .finally(() => {
         setIsFetching(false);
@@ -132,6 +137,8 @@ export const App = () => {
           children={githubInformation?.body ?? ""}
           skipHtml
         />
+        {hasErrorSearch && <p>The package was not found on NPM</p>}
+        {hasErrorGithub && <p>No release notes has found on Github for this version or no Github repository is linked on package.json</p>}
       </Grid>
     </ChakraProvider>
   );

@@ -2,6 +2,7 @@
   "name": "release-notes-finder",
   "version": "1.0.0",
   "private": true,
+  "homepage": "https://maxgfr.github.io/release-notes-finder",
   "dependencies": {
     "@chakra-ui/react": "^2.4.1",
     "@emotion/react": "^11.10.5",
@@ -12,7 +13,6 @@
     "react-dom": "^18.2.0",
     "react-icons": "^3.11.0",
     "react-markdown": "^8.0.3",
-    "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
   "devDependencies": {
@@ -24,6 +24,7 @@
     "@types/react": "^18.0.25",
     "@types/react-dom": "^18.0.9",
     "gh-pages": "^4.0.0",
+    "react-scripts": "5.0.1",
     "typescript": "^4.9.3"
   },
   "scripts": {
@@ -31,7 +32,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "deploy:action": "npm run build && gh-pages -d build -u \"github-actions-bot <support+actions@github.com>\""
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build -u \"github-actions-bot <support+actions@github.com>\""
   },
   "eslintConfig": {
     "extends": "react-app"
