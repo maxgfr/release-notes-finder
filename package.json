@@ -2,6 +2,7 @@
   "name": "release-notes-finder",
   "version": "1.0.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@chakra-ui/react": "^2.4.1",
     "@emotion/react": "^11.10.5",
