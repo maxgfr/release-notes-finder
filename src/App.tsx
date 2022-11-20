@@ -1,23 +1,30 @@
 import * as React from "react";
 import {
-  ChakraProvider,
-  VStack,
-  Grid,
-  theme,
   Input,
   Button,
   Link,
   Spinner,
+  Box,
+  Image,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
+  Badge,
+  HStack,
+  Text,
 } from "@chakra-ui/react";
 import { ColorModeSwitcher } from "./ColorModeSwitcher";
-import { GithubReleaseTag } from "./types";
+import { GithubReleaseTag, TabInformation } from "./types";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
 import ReactMarkdown from "react-markdown";
 
 export const App = () => {
   const [libName, setLibName] = React.useState<string>("");
-  const [githubInformation, setGithubInformation] =
-    React.useState<GithubReleaseTag | null>(null);
+  const [githubInformation, setGithubInformation] = React.useState<
+    TabInformation[]
+  >([]);
   const [githubUser, setGithubUser] = React.useState<string>("");
   const [githubRepoName, setGithubRepoName] = React.useState<string>("");
   const [npmReadme, setNpmReadme] = React.useState<string>("");
@@ -27,9 +34,10 @@ export const App = () => {
   const [filter, setFilter] = React.useState<string>("");
   const [hasErrorSearch, setHasErrorSearch] = React.useState<boolean>(false);
   const [hasErrorGithub, setHasErrorGithub] = React.useState<boolean>(false);
+  const [selectedVersion, setSelectedVersion] = React.useState<string[]>([]);
 
   const resetAll = () => {
-    setGithubInformation(null);
+    setGithubInformation([]);
     setGithubUser("");
     setGithubRepoName("");
     setNpmReadme("");
@@ -40,8 +48,10 @@ export const App = () => {
   };
 
   const onSearch = () => {
-    resetAll()
+    resetAll();
     setIsFetching(true);
+    setHasErrorSearch(false);
+    setHasErrorGithub(false);
     fetch(`https://registry.npmjs.org/${libName}`)
       .then(res => res.json())
       .then(res => {
@@ -76,12 +86,30 @@ export const App = () => {
 
   const onClickVersion = (version: string) => {
     setIsFetching(true);
+    setHasErrorGithub(false);
+    const newSelectedVersion = [...selectedVersion, version];
+    const uniqueSelectedVersion = newSelectedVersion.filter(
+      (v, i, a) => a.indexOf(v) === i
+    );
+    setSelectedVersion(uniqueSelectedVersion);
     fetch(
       `https://api.github.com/repos/${githubUser}/${githubRepoName}/releases/tags/v${version}`
     )
       .then(res => res.json())
-      .then(res => {
-        setGithubInformation(res);
+      .then((res: GithubReleaseTag) => {
+        if (res.body) {
+          const info: TabInformation = {
+            releaseInformation: res.body,
+            version,
+          };
+          const newGithubInformation = [...githubInformation, info];
+          const uniqueGithubInformation = newGithubInformation.filter(
+            (v, i, a) => a.findIndex(t => t.version === v.version) === i
+          );
+          setGithubInformation(uniqueGithubInformation);
+        } else {
+          setHasErrorGithub(true);
+        }
       })
       .catch(err => {
         console.error(err);
@@ -92,54 +120,104 @@ export const App = () => {
       });
   };
 
-  const onChangeFilter = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const filter = e.target.value;
-    setFilter(filter);
-    setFilteredVersion(versions.filter(version => version.includes(filter)));
+  const onChangeFilter = (v: string) => {
+    setFilter(v);
+    setFilteredVersion(versions.filter(version => version.includes(v)));
   };
 
   return (
-    <ChakraProvider theme={theme}>
-      <Grid minH="100vh" p={3}>
-        <ColorModeSwitcher justifySelf="flex-end" />
-        <VStack spacing={8}>
-          <Input
-            placeholder="Search the package name"
-            value={libName}
-            onChange={e => setLibName(e.target.value)}
-          />
-          <Button colorScheme="teal" onClick={onSearch}>
-            Search
-          </Button>
-        </VStack>
-        {isFetching && <Spinner/>}
-        <ReactMarkdown
-          components={ChakraUIRenderer()}
-          children={npmReadme ?? ""}
-          skipHtml
+    <Box display="flex" flexDirection="column" minH="100vh" p={3}>
+      <ColorModeSwitcher alignSelf="flex-end" />
+      <Box display="flex" flexDirection="column" alignItems="center">
+        <Image src="icon.svg" width="40" height="40" />
+        <Input
+          placeholder="The npm package name (e.g. react, react-native, etc.)"
+          value={libName}
+          onChange={e => setLibName(e.target.value)}
+          maxWidth="500px"
+          onKeyPress={e => {
+            if (e.key === "Enter") {
+              onSearch();
+            }
+          }}
         />
-        {filteredVersion && filteredVersion.length > 0 && (
-          <>
-            <Input
-              placeholder="Search a specific version"
-              value={filter}
-              onChange={onChangeFilter}
-            />
-            {filteredVersion.map(version => (
-              <Link key={version} onClick={() => onClickVersion(version)}>
-                {version}
-              </Link>
-            ))}
-          </>
+        <Button colorScheme="teal" onClick={onSearch} marginY="4">
+          Search
+        </Button>
+        {isFetching && <Spinner />}
+        {hasErrorSearch && (
+          <Text color="red.500">The package was not found on NPM</Text>
         )}
-        <ReactMarkdown
-          components={ChakraUIRenderer()}
-          children={githubInformation?.body ?? ""}
-          skipHtml
-        />
-        {hasErrorSearch && <p>The package was not found on NPM</p>}
-        {hasErrorGithub && <p>No release notes has found on Github for this version or no Github repository is linked on package.json</p>}
-      </Grid>
-    </ChakraProvider>
+        {hasErrorGithub && (
+          <Text color="red.500">
+            No release notes has found on Github for this version or no Github
+            repository is linked on package.json
+          </Text>
+        )}
+      </Box>
+      {versions.length > 0 && (
+        <Tabs marginTop="4">
+          <TabList>
+            {npmReadme && <Tab>Presentation</Tab>}
+            {versions && versions.length > 0 && <Tab>Versions</Tab>}
+            {githubInformation &&
+              githubInformation.length > 0 &&
+              githubInformation.map(info => (
+                <Tab key={`tabpanel-${info.version}`}>
+                  Version {info.version}
+                </Tab>
+              ))}
+          </TabList>
+          <TabPanels>
+            {npmReadme && (
+              <TabPanel>
+                <ReactMarkdown
+                  components={ChakraUIRenderer()}
+                  children={npmReadme}
+                  skipHtml
+                />
+              </TabPanel>
+            )}
+            {versions && versions.length > 0 && (
+              <TabPanel>
+                <Box display="flex" flexDirection="column">
+                  <Input
+                    placeholder="Search a specific version"
+                    value={filter}
+                    onChange={e => onChangeFilter(e.target.value)}
+                  />
+                  <Box
+                    display="flex"
+                    flexDirection="row"
+                    marginTop="6"
+                    flexWrap="wrap"
+                    justifyContent="left"
+                  >
+                    {filteredVersion.map(version => (
+                      <Box key={`list-${version}`} margin="2">
+                        <Link onClick={() => onClickVersion(version)}>
+                          <Badge fontSize="medium">{version}</Badge>
+                        </Link>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              </TabPanel>
+            )}
+            {githubInformation &&
+              githubInformation.length > 0 &&
+              githubInformation.map(info => (
+                <TabPanel key={`tabpanel-${info.version}`}>
+                  <ReactMarkdown
+                    components={ChakraUIRenderer()}
+                    children={info.releaseInformation}
+                    skipHtml
+                  />
+                </TabPanel>
+              ))}
+          </TabPanels>
+        </Tabs>
+      )}
+    </Box>
   );
 };
