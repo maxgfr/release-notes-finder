@@ -35,6 +35,7 @@ export const App = () => {
   const [hasErrorSearch, setHasErrorSearch] = React.useState<boolean>(false);
   const [hasErrorGithub, setHasErrorGithub] = React.useState<boolean>(false);
   const [selectedVersion, setSelectedVersion] = React.useState<string[]>([]);
+  const [changelog, setChangelog] = React.useState<string>("");
 
   const resetAll = () => {
     setGithubInformation([]);
@@ -72,8 +73,23 @@ export const App = () => {
         setFilteredVersion(versions);
         setNpmReadme(res.readme);
         const githubUrl = res.repository.url ?? res.homepage;
-        setGithubUser(githubUrl.split("/")[3]);
-        setGithubRepoName(githubUrl.split("/")[4].split(".")[0].split("#")[0]);
+        const githubUser = githubUrl.split("/")[3];
+        const githubRepoName = githubUrl
+          .split("/")[4]
+          .split(".")[0]
+          .split("#")[0];
+        setGithubUser(githubUser);
+        setGithubRepoName(githubRepoName);
+        return { githubUser, githubRepoName };
+      })
+      .then(async res => {
+        const fetchResult = await fetch(
+          `https://api.github.com/repos/${res.githubUser}/${res.githubRepoName}/contents/CHANGELOG.md`
+        );
+        const json = await fetchResult.json();
+        const base64 = json.content;
+        const changelog = atob(base64);
+        setChangelog(changelog);
       })
       .catch(err => {
         console.error(err);
@@ -164,6 +180,7 @@ export const App = () => {
           <TabList>
             {npmReadme && <Tab>Presentation</Tab>}
             {versions && versions.length > 0 && <Tab>Versions</Tab>}
+            {changelog && <Tab>Changelog</Tab>}
             {githubInformation &&
               githubInformation.length > 0 &&
               githubInformation.map(info => (
@@ -206,6 +223,15 @@ export const App = () => {
                     ))}
                   </Box>
                 </Box>
+              </TabPanel>
+            )}
+            {changelog && (
+              <TabPanel>
+                <ReactMarkdown
+                  components={ChakraUIRenderer()}
+                  children={changelog}
+                  skipHtml
+                />
               </TabPanel>
             )}
             {githubInformation &&
