@@ -1,12 +1,12 @@
 {
   "files": {
-    "main.js": "/release-notes-finder/static/js/main.8697e1f3.js",
+    "main.js": "/release-notes-finder/static/js/main.e37c1a2b.js",
     "static/js/787.b872ca38.chunk.js": "/release-notes-finder/static/js/787.b872ca38.chunk.js",
     "index.html": "/release-notes-finder/index.html",
-    "main.8697e1f3.js.map": "/release-notes-finder/static/js/main.8697e1f3.js.map",
+    "main.e37c1a2b.js.map": "/release-notes-finder/static/js/main.e37c1a2b.js.map",
     "787.b872ca38.chunk.js.map": "/release-notes-finder/static/js/787.b872ca38.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/main.8697e1f3.js"
+    "static/js/main.e37c1a2b.js"
   ]
 }
