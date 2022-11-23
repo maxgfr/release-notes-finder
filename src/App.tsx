@@ -2,24 +2,20 @@ import * as React from "react";
 import {
   Input,
   Button,
-  Link,
   Spinner,
   Box,
   Image,
   Tab,
   TabList,
-  TabPanel,
   TabPanels,
   Tabs,
-  Badge,
   Text,
   Heading,
 } from "@chakra-ui/react";
-import { ColorModeSwitcher } from "./ColorModeSwitcher";
+import { ColorModeSwitcher } from "./components/ColorModeSwitcher";
 import { GithubReleaseTag, TabInformation } from "./types";
-import ChakraUIRenderer from "chakra-ui-markdown-renderer";
-import ReactMarkdown from "react-markdown";
-import rehypeRaw from "rehype-raw";
+import { FilterTab } from "./components/FilterTab";
+import { MemoizeTab } from "./components/MemoizeTab";
 
 export const App = () => {
   const inputRef = React.createRef<HTMLInputElement>();
@@ -31,8 +27,6 @@ export const App = () => {
   const [npmReadme, setNpmReadme] = React.useState<string>("");
   const [versions, setVersions] = React.useState<string[]>([]);
   const [isFetching, setIsFetching] = React.useState<boolean>(false);
-  const [filteredVersion, setFilteredVersion] = React.useState<string[]>([]);
-  const [filter, setFilter] = React.useState<string>("");
   const [hasErrorSearch, setHasErrorSearch] = React.useState<boolean>(false);
   const [hasErrorGithub, setHasErrorGithub] = React.useState<boolean>(false);
   const [selectedVersion, setSelectedVersion] = React.useState<string[]>([]);
@@ -45,8 +39,6 @@ export const App = () => {
     setGithubRepoName("");
     setNpmReadme("");
     setVersions([]);
-    setFilteredVersion([]);
-    setFilter("");
     setHasErrorSearch(false);
     setChangelog("");
     setReadme("");
@@ -74,15 +66,14 @@ export const App = () => {
           const aSplit = a.split(".");
           const bSplit = b.split(".");
           if (aSplit[0] !== bSplit[0]) {
-            return parseInt(aSplit[0]) - parseInt(bSplit[0]);
+            return parseInt(bSplit[0]) - parseInt(aSplit[0]);
           }
           if (aSplit[1] !== bSplit[1]) {
-            return parseInt(aSplit[1]) - parseInt(bSplit[1]);
+            return parseInt(bSplit[1]) - parseInt(aSplit[1]);
           }
-          return parseInt(aSplit[2]) - parseInt(bSplit[2]);
+          return parseInt(bSplit[2]) - parseInt(aSplit[2]);
         });
       setVersions(versions);
-      setFilteredVersion(versions);
       setNpmReadme(npmInfoJson.readme);
       const githubUrl = npmInfoJson.repository.url ?? npmInfoJson.homepage;
       const githubUser = githubUrl.split("/")[3];
@@ -148,11 +139,6 @@ export const App = () => {
       });
   };
 
-  const onChangeFilter = (v: string) => {
-    setFilter(v);
-    setFilteredVersion(versions.filter(version => version.includes(v)));
-  };
-
   return (
     <Box display="flex" flexDirection="column" minH="100vh" p={3}>
       <Box display="flex" flexDirection="row" justifyContent="space-between">
@@ -202,69 +188,19 @@ export const App = () => {
               ))}
           </TabList>
           <TabPanels>
-            {npmReadme && (
-              <TabPanel>
-                <ReactMarkdown
-                  components={ChakraUIRenderer()}
-                  children={npmReadme}
-                  rehypePlugins={[rehypeRaw]}
-                />
-              </TabPanel>
-            )}
-            {readme && (
-              <TabPanel>
-                <ReactMarkdown
-                  components={ChakraUIRenderer()}
-                  children={readme}
-                  rehypePlugins={[rehypeRaw]}
-                />
-              </TabPanel>
-            )}
-            {changelog && (
-              <TabPanel>
-                <ReactMarkdown
-                  components={ChakraUIRenderer()}
-                  children={changelog}
-                  rehypePlugins={[rehypeRaw]}
-                />
-              </TabPanel>
-            )}
+            {npmReadme && <MemoizeTab info={npmReadme} />}
+            {readme && <MemoizeTab info={readme} />}
+            {changelog && <MemoizeTab info={changelog} />}
             {versions && versions.length > 0 && (
-              <TabPanel>
-                <Box display="flex" flexDirection="column">
-                  <Input
-                    placeholder="Version"
-                    value={filter}
-                    onChange={e => onChangeFilter(e.target.value)}
-                  />
-                  <Box
-                    display="flex"
-                    flexDirection="row"
-                    marginTop="6"
-                    flexWrap="wrap"
-                    justifyContent="left"
-                  >
-                    {filteredVersion.map(version => (
-                      <Box key={`list-${version}`} margin="2">
-                        <Link onClick={() => onClickVersion(version)}>
-                          <Badge fontSize="medium">{version}</Badge>
-                        </Link>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              </TabPanel>
+              <FilterTab onClickVersion={onClickVersion} versions={versions} />
             )}
             {githubInformation &&
               githubInformation.length > 0 &&
               githubInformation.map(info => (
-                <TabPanel key={`tabpanel-${info.version}`}>
-                  <ReactMarkdown
-                    components={ChakraUIRenderer()}
-                    children={info.releaseInformation}
-                    rehypePlugins={[rehypeRaw]}
-                  />
-                </TabPanel>
+                <MemoizeTab
+                  key={`tabpanel-${info.version}`}
+                  info={info.releaseInformation}
+                />
               ))}
           </TabPanels>
         </Tabs>
