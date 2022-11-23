@@ -19,9 +19,10 @@ import { ColorModeSwitcher } from "./ColorModeSwitcher";
 import { GithubReleaseTag, TabInformation } from "./types";
 import ChakraUIRenderer from "chakra-ui-markdown-renderer";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 
 export const App = () => {
-  const [libName, setLibName] = React.useState<string>("");
+  const inputRef = React.createRef<HTMLInputElement>();
   const [githubInformation, setGithubInformation] = React.useState<
     TabInformation[]
   >([]);
@@ -36,6 +37,7 @@ export const App = () => {
   const [hasErrorGithub, setHasErrorGithub] = React.useState<boolean>(false);
   const [selectedVersion, setSelectedVersion] = React.useState<string[]>([]);
   const [changelog, setChangelog] = React.useState<string>("");
+  const [readme, setReadme] = React.useState<string>("");
 
   const resetAll = () => {
     setGithubInformation([]);
@@ -46,58 +48,68 @@ export const App = () => {
     setFilteredVersion([]);
     setFilter("");
     setHasErrorSearch(false);
+    setChangelog("");
+    setReadme("");
   };
 
-  const onSearch = () => {
+  const onSearch = async () => {
+    let npmInfo = null;
     resetAll();
     setIsFetching(true);
     setHasErrorSearch(false);
     setHasErrorGithub(false);
-    fetch(`https://registry.npmjs.org/${libName}`)
-      .then(res => res.json())
-      .then(res => {
-        const versions = Object.keys(res.versions)
-          .filter(version => !version.includes("-"))
-          .sort((a, b) => {
-            const aSplit = a.split(".");
-            const bSplit = b.split(".");
-            if (aSplit[0] !== bSplit[0]) {
-              return parseInt(aSplit[0]) - parseInt(bSplit[0]);
-            }
-            if (aSplit[1] !== bSplit[1]) {
-              return parseInt(aSplit[1]) - parseInt(bSplit[1]);
-            }
-            return parseInt(aSplit[2]) - parseInt(bSplit[2]);
-          });
-        setVersions(versions);
-        setFilteredVersion(versions);
-        setNpmReadme(res.readme);
-        const githubUrl = res.repository.url ?? res.homepage;
-        const githubUser = githubUrl.split("/")[3];
-        const githubRepoName = githubUrl
-          .split("/")[4]
-          .split(".")[0]
-          .split("#")[0];
-        setGithubUser(githubUser);
-        setGithubRepoName(githubRepoName);
-        return { githubUser, githubRepoName };
-      })
-      .then(async res => {
-        const fetchResult = await fetch(
-          `https://api.github.com/repos/${res.githubUser}/${res.githubRepoName}/contents/CHANGELOG.md`
-        );
-        const json = await fetchResult.json();
-        const base64 = json.content;
-        const changelog = atob(base64);
-        setChangelog(changelog);
-      })
-      .catch(err => {
-        console.error(err);
-        setHasErrorSearch(true);
-      })
-      .finally(() => {
-        setIsFetching(false);
-      });
+    try {
+      npmInfo = await fetch(
+        `https://registry.npmjs.org/${inputRef.current?.value}`
+      );
+    } catch {
+      setIsFetching(false);
+      setHasErrorSearch(true);
+    }
+    if (npmInfo) {
+      const npmInfoJson = await npmInfo.json();
+      const versions = Object.keys(npmInfoJson.versions)
+        .filter(version => !version.includes("-"))
+        .sort((a, b) => {
+          const aSplit = a.split(".");
+          const bSplit = b.split(".");
+          if (aSplit[0] !== bSplit[0]) {
+            return parseInt(aSplit[0]) - parseInt(bSplit[0]);
+          }
+          if (aSplit[1] !== bSplit[1]) {
+            return parseInt(aSplit[1]) - parseInt(bSplit[1]);
+          }
+          return parseInt(aSplit[2]) - parseInt(bSplit[2]);
+        });
+      setVersions(versions);
+      setFilteredVersion(versions);
+      setNpmReadme(npmInfoJson.readme);
+      const githubUrl = npmInfoJson.repository.url ?? npmInfoJson.homepage;
+      const githubUser = githubUrl.split("/")[3];
+      const githubRepoName = githubUrl
+        .split("/")[4]
+        .split(".")[0]
+        .split("#")[0];
+      setGithubUser(githubUser);
+      setGithubRepoName(githubRepoName);
+      Promise.all([
+        fetch(
+          `https://api.github.com/repos/${githubUser}/${githubRepoName}/contents/README.md`
+        ),
+        fetch(
+          `https://api.github.com/repos/${githubUser}/${githubRepoName}/contents/CHANGELOG.md`
+        ),
+      ])
+        .then(async ([readme, changelog]) => {
+          const readmeJson = await readme.json();
+          const changelogJson = await changelog.json();
+          setReadme(atob(readmeJson.content));
+          setChangelog(atob(changelogJson.content));
+        })
+        .finally(() => {
+          setIsFetching(false);
+        });
+    }
   };
 
   const onClickVersion = (version: string) => {
@@ -151,9 +163,8 @@ export const App = () => {
       <Box display="flex" flexDirection="column" alignItems="center">
         <Image src="icon.svg" width="120px" height="120px" />
         <Input
+          ref={inputRef}
           placeholder="NPM package name (e.g. react, react-native, etc.)"
-          value={libName}
-          onChange={e => setLibName(e.target.value)}
           maxWidth="500px"
           onKeyPress={e => {
             if (e.key === "Enter") {
@@ -178,9 +189,10 @@ export const App = () => {
       {versions.length > 0 && (
         <Tabs marginTop="4">
           <TabList>
-            {npmReadme && <Tab>Presentation</Tab>}
+            {npmReadme && <Tab>README.md (npm)</Tab>}
+            {readme && <Tab>README.md (github)</Tab>}
+            {changelog && <Tab>CHANGELOG.md</Tab>}
             {versions && versions.length > 0 && <Tab>Versions</Tab>}
-            {changelog && <Tab>Changelog</Tab>}
             {githubInformation &&
               githubInformation.length > 0 &&
               githubInformation.map(info => (
@@ -195,7 +207,25 @@ export const App = () => {
                 <ReactMarkdown
                   components={ChakraUIRenderer()}
                   children={npmReadme}
-                  skipHtml
+                  rehypePlugins={[rehypeRaw]}
+                />
+              </TabPanel>
+            )}
+            {readme && (
+              <TabPanel>
+                <ReactMarkdown
+                  components={ChakraUIRenderer()}
+                  children={readme}
+                  rehypePlugins={[rehypeRaw]}
+                />
+              </TabPanel>
+            )}
+            {changelog && (
+              <TabPanel>
+                <ReactMarkdown
+                  components={ChakraUIRenderer()}
+                  children={changelog}
+                  rehypePlugins={[rehypeRaw]}
                 />
               </TabPanel>
             )}
@@ -225,15 +255,6 @@ export const App = () => {
                 </Box>
               </TabPanel>
             )}
-            {changelog && (
-              <TabPanel>
-                <ReactMarkdown
-                  components={ChakraUIRenderer()}
-                  children={changelog}
-                  skipHtml
-                />
-              </TabPanel>
-            )}
             {githubInformation &&
               githubInformation.length > 0 &&
               githubInformation.map(info => (
@@ -241,7 +262,7 @@ export const App = () => {
                   <ReactMarkdown
                     components={ChakraUIRenderer()}
                     children={info.releaseInformation}
-                    skipHtml
+                    rehypePlugins={[rehypeRaw]}
                   />
                 </TabPanel>
               ))}
