@@ -122,10 +122,11 @@ export const usePackageSearch = (): UsePackageSearchReturn => {
 
       if (githubUrl) {
         extractedGithubUser = githubUrl.split("/")[3] || "";
-        extractedGithubRepoName = githubUrl
-          .split("/")[4]
-          ?.split(".")[0]
-          ?.split("#")[0] || "";
+        // Extract repo name: remove .git extension and fragment (#...), but keep dots in name (e.g., next.js)
+        const repoPath = githubUrl.split("/")[4] || "";
+        extractedGithubRepoName = repoPath
+          .replace(/\.git$/, "") // Remove .git extension at the end
+          ?.split("#")[0] || ""; // Remove fragment (#...)
       }
 
       setPackageData({
