@@ -13,6 +13,7 @@ import { usePackageSearch } from "./hooks/usePackageSearch";
 export const App = () => {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = React.useState("");
+  const hasLoadedFromUrlRef = React.useRef(false);
 
   const { searchHistory, addToHistory, removeFromHistory } = useSearchHistory();
   const { npmSuggestions, isSearching, debouncedSearch, clearSuggestions } = useNpmSearch();
@@ -22,24 +23,48 @@ export const App = () => {
     isFetching,
     hasErrorSearch,
     hasErrorGithub,
+    hasRateLimitError,
     searchPackage,
     fetchVersionReleaseNotes,
     closeVersionTab,
   } = usePackageSearch();
+
+  // Load search from URL on mount only
+  React.useEffect(() => {
+    if (hasLoadedFromUrlRef.current) return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const query = urlParams.get('q');
+    if (query) {
+      hasLoadedFromUrlRef.current = true;
+      setInputValue(query);
+      if (inputRef.current) {
+        inputRef.current.value = query;
+      }
+      addToHistory(query);
+      clearSuggestions();
+      searchPackage(query);
+    }
+  }, [addToHistory, clearSuggestions, searchPackage]);
 
   const onInputChange = (value: string) => {
     setInputValue(value);
     debouncedSearch(value);
   };
 
-  const onSearch = async (searchValue?: string) => {
+  const onSearch = React.useCallback(async (searchValue?: string) => {
     const valueToSearch = searchValue || inputRef.current?.value || "";
     if (!valueToSearch) return;
+
+    // Update URL with query parameter
+    const url = new URL(window.location.href);
+    url.searchParams.set('q', valueToSearch);
+    window.history.pushState({}, '', url);
 
     addToHistory(valueToSearch);
     clearSuggestions();
     await searchPackage(valueToSearch);
-  };
+  }, [addToHistory, clearSuggestions, searchPackage]);
 
   const onSelectFromHistory = (pkg: string) => {
     if (inputRef.current) {
@@ -107,6 +132,7 @@ export const App = () => {
         <ErrorMessages
           hasErrorSearch={hasErrorSearch}
           hasErrorGithub={hasErrorGithub}
+          hasRateLimitError={hasRateLimitError}
         />
       </Box>
       <PackageTabs

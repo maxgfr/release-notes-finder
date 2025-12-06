@@ -22,6 +22,7 @@ interface UsePackageSearchReturn {
   isFetching: boolean;
   hasErrorSearch: boolean;
   hasErrorGithub: boolean;
+  hasRateLimitError: boolean;
   searchPackage: (packageName: string) => Promise<void>;
   fetchVersionReleaseNotes: (version: string) => Promise<void>;
   closeVersionTab: (version: string) => void;
@@ -49,6 +50,7 @@ export const usePackageSearch = (): UsePackageSearchReturn => {
   const [isFetching, setIsFetching] = React.useState(false);
   const [hasErrorSearch, setHasErrorSearch] = React.useState(false);
   const [hasErrorGithub, setHasErrorGithub] = React.useState(false);
+  const [hasRateLimitError, setHasRateLimitError] = React.useState(false);
 
   // Ref to always have the latest values in callbacks
   const packageDataRef = React.useRef<PackageData>(initialPackageData);
@@ -61,6 +63,7 @@ export const usePackageSearch = (): UsePackageSearchReturn => {
     setGithubInformation([]);
     setHasErrorSearch(false);
     setHasErrorGithub(false);
+    setHasRateLimitError(false);
   }, []);
 
   const searchPackage = React.useCallback(async (searchValue: string) => {
@@ -120,13 +123,14 @@ export const usePackageSearch = (): UsePackageSearchReturn => {
         githubUrl = homepage;
       }
 
-      if (githubUrl) {
-        extractedGithubUser = githubUrl.split("/")[3] || "";
+      // Clean githubUrl before extracting user and repo name
+      const cleanGithubUrl = githubUrl.replace("git+", "").replace(/\.git$/, "");
+
+      if (cleanGithubUrl) {
+        extractedGithubUser = cleanGithubUrl.split("/")[3] || "";
         // Extract repo name: remove .git extension and fragment (#...), but keep dots in name (e.g., next.js)
-        const repoPath = githubUrl.split("/")[4] || "";
-        extractedGithubRepoName = repoPath
-          .replace(/\.git$/, "") // Remove .git extension at the end
-          ?.split("#")[0] || ""; // Remove fragment (#...)
+        const repoPath = cleanGithubUrl.split("/")[4] || "";
+        extractedGithubRepoName = repoPath?.split("#")[0] || ""; // Remove fragment (#...)
       }
 
       setPackageData({
@@ -134,7 +138,7 @@ export const usePackageSearch = (): UsePackageSearchReturn => {
         packageName: searchValue,
         githubUser: extractedGithubUser,
         githubRepoName: extractedGithubRepoName,
-        githubUrl: githubUrl.replace("git+", "").replace(".git", ""),
+        githubUrl: cleanGithubUrl,
         changelog: "",
         description,
         author,
@@ -182,6 +186,7 @@ export const usePackageSearch = (): UsePackageSearchReturn => {
 
     setIsFetching(true);
     setHasErrorGithub(false);
+    setHasRateLimitError(false);
 
     // Try the most common format first: v{version}
     const primaryFormat = `v${version}`;
@@ -192,6 +197,12 @@ export const usePackageSearch = (): UsePackageSearchReturn => {
       const releaseRes = await fetch(
         `https://api.github.com/repos/${githubUser}/${githubRepoName}/releases/tags/${primaryFormat}`
       );
+      
+      if (releaseRes.status === 403) {
+        setHasRateLimitError(true);
+        setIsFetching(false);
+        return;
+      }
       
       if (releaseRes.ok) {
         const releaseData = await releaseRes.json();
@@ -235,6 +246,12 @@ export const usePackageSearch = (): UsePackageSearchReturn => {
           const releaseRes = await fetch(
             `https://api.github.com/repos/${githubUser}/${githubRepoName}/releases/tags/${tagFormat}`
           );
+          
+          if (releaseRes.status === 403) {
+            setHasRateLimitError(true);
+            setIsFetching(false);
+            return;
+          }
           
           if (releaseRes.ok) {
             const releaseData = await releaseRes.json();
@@ -284,6 +301,12 @@ export const usePackageSearch = (): UsePackageSearchReturn => {
             `https://api.github.com/repos/${githubUser}/${githubRepoName}/git/refs/tags/${tagFormat}`
           );
           
+          if (tagRes.status === 403) {
+            setHasRateLimitError(true);
+            setIsFetching(false);
+            return;
+          }
+          
           if (tagRes.ok) {
             const tagData = await tagRes.json();
             if (tagData.object) {
@@ -325,6 +348,7 @@ export const usePackageSearch = (): UsePackageSearchReturn => {
     isFetching,
     hasErrorSearch,
     hasErrorGithub,
+    hasRateLimitError,
     searchPackage,
     fetchVersionReleaseNotes,
     closeVersionTab,
