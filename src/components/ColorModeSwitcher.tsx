@@ -1,22 +1,28 @@
-import { Select } from "@chakra-ui/react";
+import { Icon, IconButton } from "@chakra-ui/react";
+import { FiMonitor, FiMoon, FiSun } from "react-icons/fi";
 import { useThemePreference } from "../theme/ThemePreferenceProvider";
-import { ThemePreference } from "../theme/preference";
+
+const modes = {
+  auto: { icon: FiMonitor, label: "Auto", next: "dark" },
+  dark: { icon: FiMoon, label: "Dark", next: "light" },
+  light: { icon: FiSun, label: "Light", next: "auto" },
+} as const;
+
 export function ColorModeSwitcher() {
   const { preference, setPreference } = useThemePreference();
+  const mode = modes[preference];
+  const label = `Color theme: ${mode.label}. Switch to ${mode.next} mode`;
   return (
-    <Select
-      aria-label="Color theme"
-      title="Color theme"
-      value={preference}
-      onChange={(event) => setPreference(event.target.value as ThemePreference)}
-      width="auto"
-      minW="92px"
-      size="sm"
+    <IconButton
+      aria-label={label}
+      title={label}
+      icon={<Icon as={mode.icon} boxSize={5} />}
+      onClick={() => setPreference(mode.next)}
+      variant="ghost"
+      size="md"
+      minW="44px"
+      h="44px"
       flexShrink={0}
-    >
-      <option value="auto">Auto</option>
-      <option value="light">Light</option>
-      <option value="dark">Dark</option>
-    </Select>
+    />
   );
 }

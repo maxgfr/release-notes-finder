@@ -122,8 +122,12 @@ test("a new version selection can replace an interval that is still loading", as
   });
   await page.goto("/?q=example&from=1.0.0&to=1.7.0&view=range");
   await expect.poll(() => !!pending).toBe(true);
-  await page.getByLabel("From version").fill("1.2.0");
-  await page.getByLabel("To version").fill("1.3.0");
+  await page.getByRole("button", { name: /^From version:/ }).click();
+  await page.getByRole("combobox", { name: "Search versions" }).fill("1.2.0");
+  await page.getByRole("option", { name: "1.2.0", exact: true }).click();
+  await page.getByRole("button", { name: /^To version:/ }).click();
+  await page.getByRole("combobox", { name: "Search versions" }).fill("1.3.0");
+  await page.getByRole("option", { name: "1.3.0", exact: true }).click();
   await page.getByRole("button", { name: "Compare", exact: true }).click();
   await pending.fulfill({
     json: { tag_name: "v1.1.0", body: "# Superseded notes" },

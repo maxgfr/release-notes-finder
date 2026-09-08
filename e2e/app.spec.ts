@@ -381,12 +381,10 @@ test("supports dark mode, clipboard sharing and keyboard tab navigation", async 
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
     "q=example&version=1.2.0",
   );
-  await page
-    .getByRole("combobox", { name: "Color theme" })
-    .selectOption("dark");
-  await expect(page.getByRole("combobox", { name: "Color theme" })).toHaveValue(
-    "dark",
-  );
+  await page.getByRole("button", { name: /^Color theme: Auto/ }).click();
+  await expect(
+    page.getByRole("button", { name: /^Color theme: Dark/ }),
+  ).toBeVisible();
   await page.getByRole("tab", { name: "Versions", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(

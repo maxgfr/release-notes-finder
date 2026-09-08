@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import {
   Box,
   Button,
@@ -19,8 +19,10 @@ import { Changelog, ReleaseNotes } from "../services/releases";
 import { FilterTab } from "./FilterTab";
 import { PackageInfo } from "./PackageInfo";
 import { ReleasePanel, MarkdownContent, Loading } from "./ReleasePanel";
-import { Comparison } from "./Comparison";
 import { CompareLoader } from "../services/comparison";
+const Comparison = lazy(() =>
+  import("./Comparison").then((module) => ({ default: module.Comparison })),
+);
 interface Props {
   compareVersions: CompareLoader;
   pkg: PackageData;
@@ -110,15 +112,17 @@ export function PackageTabs(props: Props) {
         </TabPanel>
         <TabPanel px={{ base: 0, md: 4 }}>
           {active === "compare" && (
-            <Comparison
-              pkg={pkg}
-              compareVersions={props.compareVersions}
-              navigation={props.navigation}
-              onNavigate={props.onNavigate}
-              notes={notes}
-              load={loadRelease}
-              authRevision={authRevision}
-            />
+            <Suspense fallback={<Loading label="Loading comparison…" />}>
+              <Comparison
+                pkg={pkg}
+                compareVersions={props.compareVersions}
+                navigation={props.navigation}
+                onNavigate={props.onNavigate}
+                notes={notes}
+                load={loadRelease}
+                authRevision={authRevision}
+              />
+            </Suspense>
           )}
         </TabPanel>
         {props.openVersions.map((version) => (

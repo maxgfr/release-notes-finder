@@ -6,7 +6,6 @@ import {
   FormLabel,
   Heading,
   HStack,
-  Input,
   Select,
   SimpleGrid,
   Text,
@@ -20,6 +19,7 @@ import { ReleaseNotes } from "../services/releases";
 import { ApiError, isAbort } from "../services/client";
 import { ReleasePanel } from "./ReleasePanel";
 import { RepositoryChanges } from "./RepositoryChanges";
+import { VersionSelect } from "./VersionSelect";
 import { CompareLoader } from "../services/comparison";
 interface Props {
   pkg: PackageData;
@@ -51,14 +51,6 @@ export function Comparison({
   }, []);
   const latestNotes = useRef(notes);
   latestNotes.current = notes;
-  const options = useMemo(
-    () => pkg.versions.filter((v) => !from || v.includes(from)).slice(0, 50),
-    [pkg.versions, from],
-  );
-  const targets = useMemo(
-    () => pkg.versions.filter((v) => !to || v.includes(to)).slice(0, 50),
-    [pkg.versions, to],
-  );
   const validPair =
     pkg.versions.includes(navigation.from) &&
     pkg.versions.includes(navigation.to) &&
@@ -120,6 +112,8 @@ export function Comparison({
     setFrom(navigation.from);
     setTo(navigation.to);
     setView(navigation.view);
+  }, [navigation.from, navigation.to, navigation.view, pkg.packageName]);
+  useEffect(() => {
     setVisible([]);
     setMessage("");
     setRunning(false);
@@ -162,36 +156,22 @@ export function Comparison({
         target version.
       </Text>
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-        <FormControl>
-          <FormLabel htmlFor="compare-from">From version</FormLabel>
-          <Input
-            id="compare-from"
-            list="from-options"
-            placeholder="Search or enter a version"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-          <datalist id="from-options">
-            {options.map((v) => (
-              <option key={v} value={v} />
-            ))}
-          </datalist>
-        </FormControl>
-        <FormControl>
-          <FormLabel htmlFor="compare-to">To version</FormLabel>
-          <Input
-            id="compare-to"
-            list="to-options"
-            placeholder="Search or enter a version"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
-          <datalist id="to-options">
-            {targets.map((v) => (
-              <option key={v} value={v} />
-            ))}
-          </datalist>
-        </FormControl>
+        <VersionSelect
+          key={`${pkg.packageName}-from`}
+          id="compare-from"
+          label="From version"
+          versions={pkg.versions}
+          value={from}
+          onChange={setFrom}
+        />
+        <VersionSelect
+          key={`${pkg.packageName}-to`}
+          id="compare-to"
+          label="To version"
+          versions={pkg.versions}
+          value={to}
+          onChange={setTo}
+        />
         <FormControl>
           <FormLabel htmlFor="compare-view">View</FormLabel>
           <Select

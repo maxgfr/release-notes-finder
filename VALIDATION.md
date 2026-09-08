@@ -32,7 +32,7 @@ The cache test asserts one HTTP request for overlapping and repeated reads, anot
 
 ## Automated results
 
-44 Jest tests and 30 desktop/mobile Playwright scenarios passed. TypeScript, the production build and the initial JavaScript budget check passed.
+44 Jest tests and 38 desktop/mobile Playwright scenarios passed. TypeScript, the production build and the initial JavaScript budget check passed.
 
 ## Pre-push revalidation
 
@@ -40,7 +40,7 @@ The full suite is invoked with `CI=true yarn validate`. The script was renamed f
 
 ## Browser coverage
 
-Desktop and mobile Chromium scenarios exercise keyboard autocomplete, history removal, filters, prereleases, opening/closing tabs, source links, Unicode changelogs, both comparison views, stop/resume/full-interval loading, partial failure recovery, quota recovery, optional tokens, clipboard sharing, browser navigation, invalid links, empty packages, Auto/Light/Dark selection, live system-theme changes, persisted manual overrides and 10,000-version pagination. Markdown fixtures contain script, iframe and unsafe-link attempts.
+Desktop and mobile Chromium scenarios exercise keyboard autocomplete, history removal, filters, prereleases, opening/closing tabs, source links, Unicode changelogs, all three comparison views, stop/resume/full-interval loading, partial failure recovery, quota recovery, optional tokens, clipboard sharing, browser navigation, invalid links, empty packages, Auto/Light/Dark selection, live system-theme changes, persisted manual overrides and 10,000-version pagination. Markdown fixtures contain script, iframe and unsafe-link attempts.
 
 Local real-service smoke checks successfully loaded React 18.2.0, @babel/core 7.24.7 and Next.js 14.2.0 release notes, with no browser exceptions. Real-service checks are separate from deterministic CI tests.
 
@@ -56,3 +56,13 @@ Local real-service smoke checks successfully loaded React 18.2.0, @babel/core 7.
 A new browser regression test failed on the previous build: comparing seven intervening versions fetched only five releases. It now fetches all seven, excludes the starting version and includes the target version. The default comparison also presents repository commits and files, with unit coverage for npm commit references, scoped tag fallback, pagination, file-list limits and non-linear histories.
 
 A live comparison of React 18.0.0 → 18.2.0 loaded the intermediate release notes and returned 180 repository commits plus the capped file list, without browser exceptions. The UI flags the repository scope and file-list cap.
+
+## Searchable version pickers and theme icons
+
+The previous comparison picker exposed only 50 options for a package with 60 versions, without any way to browse the rest. Its selected value also filtered out other versions on reopening. Each endpoint now has an independent search, result count and pagination over the full published-version list, with at most 50 options rendered at once.
+
+Another reproduced regression reset an unsubmitted From choice from 1.2.0 to 1.0.0 when Include prereleases changed. Draft synchronization now depends on committed endpoints, view and package, independently of the note-loading lifecycle. Browser tests verify draft preservation, keyboard selection across pages, Escape, no matches, reopening, package changes and back navigation with a 10,000-version fixture. Pagination restores focus to search before disabling a boundary button, avoiding an unintended popup dismissal.
+
+The theme button uses distinct monitor, moon and sun icons for Auto, Dark and Light, with an accessible label describing the current preference and next action. Tests cover the complete cycle, keyboard activation, system changes, reloads and legacy preferences on desktop and mobile.
+
+Comparison code is loaded on demand. Initial JavaScript measures approximately 182,010 bytes gzip (250,000-byte budget), slightly below the previous 182,770 bytes; opening Compare downloads its additional chunks. The picker regression scenarios also passed three consecutive runs on both viewport profiles.

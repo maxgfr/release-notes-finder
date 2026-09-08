@@ -10,6 +10,7 @@ Browse npm package versions and their GitHub release notes, or read the changes 
 - SemVer sorting, text and major/minor/patch filters, latest per major, and optional prereleases. Lists show 50 versions per page.
 - Release-note tabs, a package information panel, and an on-demand changelog reader.
 - Repository detection for HTTPS, SSH and GitHub shorthand, including scoped packages and monorepo directories.
+- Searchable **From version** and **To version** pickers, with all published versions available through search and pagination.
 - **Changes between versions** (default): commits and changed files between the published Git references, followed by every release note for versions greater than A and less than or equal to B, oldest first.
 - **Release notes only**: the full published-note timeline, without the repository comparison.
 - **Endpoint notes side by side**: notes for A and B, displayed in columns on desktop and stacked on mobile.
@@ -21,7 +22,7 @@ Selecting a version opens a tab without switching away from the version list. Se
 
 ### Themes
 
-Use the **Color theme** selector in the header. **Auto** is the default for new visitors and follows the operating system, including changes while the app is open. Existing light/dark preferences are preserved. Theme selection is stored locally, independently of GitHub access.
+Click the theme icon in the header to cycle through **Auto → Dark → Light**. The icon shows a monitor, moon or sun for the current preference. **Auto** is the default for new visitors and follows the operating system, including changes while the app is open. Existing light/dark preferences are preserved. Theme selection is stored locally, independently of GitHub access.
 
 ### GitHub access
 
