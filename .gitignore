@@ -23,3 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 
 .vscode
+
+/playwright-report/
+/test-results/

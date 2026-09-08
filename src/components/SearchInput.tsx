@@ -7,230 +7,164 @@ import {
   Text,
   Spinner,
   Badge,
+  FormControl,
+  FormLabel,
 } from "@chakra-ui/react";
-
-interface NpmSuggestion {
-  name: string;
-  description?: string;
-}
-
-interface SearchInputProps {
-  inputRef: React.RefObject<HTMLInputElement>;
+import { NpmSuggestion } from "../hooks/useNpmSearch";
+interface Props {
   inputValue: string;
   onInputChange: (value: string) => void;
   onSearch: () => void;
   historySuggestions: string[];
   npmSuggestions: NpmSuggestion[];
   isSearchingNpm: boolean;
-  onSelectSuggestion: (suggestion: string) => void;
+  onSelectSuggestion: (value: string) => void;
+  onDismiss: () => void;
+  error?: string;
 }
-
-export const SearchInput: React.FC<SearchInputProps> = ({
-  inputRef,
-  inputValue,
-  onInputChange,
-  onSearch,
-  historySuggestions,
-  npmSuggestions,
-  isSearchingNpm,
-  onSelectSuggestion,
-}) => {
-  const [showSuggestions, setShowSuggestions] = React.useState(false);
-  const [selectedIndex, setSelectedIndex] = React.useState(-1);
-  const selectedItemRef = React.useRef<HTMLLIElement>(null);
-
-  // Combiner toutes les suggestions dans un seul tableau
-  const allSuggestions = React.useMemo(() => {
-    const combined: string[] = [];
-    historySuggestions.forEach(h => {
-      combined.push(h);
+export function SearchInput(props: Props) {
+  const [open, setOpen] = React.useState(false);
+  const [selected, setSelected] = React.useState(-1);
+  const id = React.useId();
+  const suggestions = React.useMemo(() => {
+    const seen = new Set<string>();
+    return [
+      ...props.historySuggestions.map((name) => ({
+        name,
+        description: "",
+        history: true,
+      })),
+      ...props.npmSuggestions.map((v) => ({ ...v, history: false })),
+    ].filter((v) => {
+      if (seen.has(v.name)) return false;
+      seen.add(v.name);
+      return true;
     });
-    npmSuggestions.forEach(n => {
-      combined.push(n.name);
-    });
-    return combined;
-  }, [historySuggestions, npmSuggestions]);
-
-  // Reset selected index when suggestions change
-  React.useEffect(() => {
-    setSelectedIndex(-1);
-  }, [inputValue]);
-
-  // Scroll to the selected element
-  React.useEffect(() => {
-    if (selectedIndex >= 0 && selectedItemRef.current) {
-      selectedItemRef.current.scrollIntoView({
-        block: "nearest",
-        behavior: "smooth",
-      });
-    }
-  }, [selectedIndex]);
-
-  const handleFocus = () => {
-    setShowSuggestions(true);
+  }, [props.historySuggestions, props.npmSuggestions]);
+  React.useEffect(() => setSelected(-1), [props.inputValue, suggestions]);
+  const dismiss = () => {
+    setOpen(false);
+    setSelected(-1);
+    props.onDismiss();
   };
-
-  const handleBlur = () => {
-    // Delay to allow clicking on a suggestion
-    setTimeout(() => {
-      setShowSuggestions(false);
-      setSelectedIndex(-1);
-    }, 200);
+  const choose = (value: string) => {
+    dismiss();
+    props.onSelectSuggestion(value);
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showSuggestions || allSuggestions.length === 0) {
-      if (e.key === "Enter") {
-        setShowSuggestions(false);
-        onSearch();
-      }
-      return;
-    }
-
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        setSelectedIndex(prev =>
-          prev < allSuggestions.length - 1 ? prev + 1 : prev
-        );
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setSelectedIndex(prev => (prev > 0 ? prev - 1 : -1));
-        break;
-      case "Enter":
-        e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < allSuggestions.length) {
-          handleSelect(allSuggestions[selectedIndex]);
-        } else {
-          setShowSuggestions(false);
-          onSearch();
-        }
-        break;
-      case "Escape":
-        setShowSuggestions(false);
-        setSelectedIndex(-1);
-        break;
-    }
-  };
-
-  const handleSelect = (suggestion: string) => {
-    setShowSuggestions(false);
-    setSelectedIndex(-1);
-    onSelectSuggestion(suggestion);
-  };
-
-  const handleInputChange = (value: string) => {
-    if (!showSuggestions) {
-      setShowSuggestions(true);
-    }
-    onInputChange(value);
-  };
-
-  const hasSuggestions =
-    historySuggestions.length > 0 || npmSuggestions.length > 0 || isSearchingNpm;
-
+  const visible =
+    open && (suggestions.length > 0 || props.isSearchingNpm || !!props.error);
   return (
-    <Box position="relative" width="100%" maxWidth="500px">
+    <FormControl maxW="500px" position="relative">
+      <FormLabel htmlFor={id}>npm package</FormLabel>
       <Input
-        ref={inputRef}
-        placeholder="NPM package name (e.g. react, react-native, etc.)"
-        value={inputValue}
-        onChange={e => handleInputChange(e.target.value)}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
+        id={id}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={!!visible}
+        aria-controls={`${id}-list`}
+        aria-activedescendant={
+          visible && selected >= 0 ? `${id}-${selected}` : undefined
+        }
+        placeholder="react, next, @babel/core…"
+        autoComplete="off"
+        value={props.inputValue}
+        onChange={(e) => {
+          setOpen(true);
+          props.onInputChange(e.target.value);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={dismiss}
+        onKeyDown={(e) => {
+          if (e.nativeEvent.isComposing) return;
+          if (e.key === "Escape") {
+            e.preventDefault();
+            dismiss();
+          }
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            setOpen(true);
+            setSelected((prev) =>
+              Math.max(
+                -1,
+                Math.min(
+                  suggestions.length - 1,
+                  prev + (e.key === "ArrowDown" ? 1 : -1),
+                ),
+              ),
+            );
+          }
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (visible && suggestions[selected])
+              choose(suggestions[selected].name);
+            else {
+              dismiss();
+              props.onSearch();
+            }
+          }
+        }}
       />
-      {showSuggestions && hasSuggestions && (
-        <List
+      {visible && (
+        <Box
           position="absolute"
           top="100%"
-          left="0"
-          right="0"
+          insetX={0}
           bg="white"
           _dark={{ bg: "gray.700" }}
-          boxShadow="md"
+          shadow="md"
           borderRadius="md"
           zIndex={10}
-          maxHeight="300px"
+          maxH="300px"
           overflowY="auto"
         >
-          {historySuggestions.length > 0 && (
-            <>
-              <ListItem px={4} py={1} bg="gray.100" _dark={{ bg: "gray.600" }}>
-                <Text fontSize="xs" fontWeight="bold" color="gray.500">
-                  History
+          <List
+            id={`${id}-list`}
+            role="listbox"
+            aria-label="Package suggestions"
+          >
+            {suggestions.map((item, index) => (
+              <ListItem
+                key={item.name}
+                id={`${id}-${index}`}
+                role="option"
+                aria-selected={index === selected}
+                ref={(el) => {
+                  if (index === selected)
+                    el?.scrollIntoView?.({ block: "nearest" });
+                }}
+                p={3}
+                cursor="pointer"
+                bg={index === selected ? "teal.50" : undefined}
+                _dark={{ bg: index === selected ? "teal.900" : undefined }}
+                _hover={{ bg: "teal.50", _dark: { bg: "teal.900" } }}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => choose(item.name)}
+              >
+                <Text fontWeight="medium">
+                  {item.name}{" "}
+                  {item.history && <Badge colorScheme="teal">Recent</Badge>}
                 </Text>
+                {item.description && (
+                  <Text fontSize="sm" noOfLines={1}>
+                    {item.description}
+                  </Text>
+                )}
               </ListItem>
-              {historySuggestions.map((suggestion, index) => (
-                <ListItem
-                  key={`history-${suggestion}`}
-                  ref={selectedIndex === index ? selectedItemRef : null}
-                  px={4}
-                  py={2}
-                  cursor="pointer"
-                  bg={selectedIndex === index ? "teal.100" : "transparent"}
-                  _dark={{
-                    bg: selectedIndex === index ? "teal.700" : "transparent",
-                  }}
-                  _hover={{ bg: "teal.100", _dark: { bg: "teal.700" } }}
-                  onClick={() => handleSelect(suggestion)}
-                >
-                  <Badge colorScheme="teal" mr={2}>
-                    recent
-                  </Badge>
-                  {suggestion}
-                </ListItem>
-              ))}
-            </>
+            ))}
+          </List>
+          {props.isSearchingNpm && (
+            <Text role="status" p={3}>
+              <Spinner size="xs" mr={2} />
+              Searching npm…
+            </Text>
           )}
-          {isSearchingNpm && (
-            <ListItem px={4} py={2} display="flex" alignItems="center">
-              <Spinner size="sm" mr={2} />
-              <Text fontSize="sm">Searching NPM...</Text>
-            </ListItem>
+          {props.error && (
+            <Text role="status" p={3} fontSize="sm">
+              {props.error}
+            </Text>
           )}
-          {npmSuggestions.length > 0 && (
-            <>
-              <ListItem px={4} py={1} bg="gray.100" _dark={{ bg: "gray.600" }}>
-                <Text fontSize="xs" fontWeight="bold" color="gray.500">
-                  NPM Packages
-                </Text>
-              </ListItem>
-              {npmSuggestions.map((suggestion, index) => {
-                const globalIndex = historySuggestions.length + index;
-                return (
-                  <ListItem
-                    key={`npm-${suggestion.name}`}
-                    ref={selectedIndex === globalIndex ? selectedItemRef : null}
-                    px={4}
-                    py={2}
-                    cursor="pointer"
-                    bg={
-                      selectedIndex === globalIndex ? "teal.100" : "transparent"
-                    }
-                    _dark={{
-                      bg:
-                        selectedIndex === globalIndex
-                          ? "teal.700"
-                          : "transparent",
-                    }}
-                    _hover={{ bg: "teal.100", _dark: { bg: "teal.700" } }}
-                    onClick={() => handleSelect(suggestion.name)}
-                  >
-                    <Text fontWeight="medium">{suggestion.name}</Text>
-                    {suggestion.description && (
-                      <Text fontSize="xs" color="gray.500" noOfLines={1}>
-                        {suggestion.description}
-                      </Text>
-                    )}
-                  </ListItem>
-                );
-              })}
-            </>
-          )}
-        </List>
+        </Box>
       )}
-    </Box>
+    </FormControl>
   );
-};
+}

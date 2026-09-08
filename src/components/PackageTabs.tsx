@@ -1,97 +1,185 @@
-import * as React from "react";
-import { Tab, TabList, TabPanels, Tabs, TabPanel } from "@chakra-ui/react";
-import type { TabInformation } from "../types";
+import { Suspense, useEffect } from "react";
+import {
+  Box,
+  Button,
+  CloseButton,
+  HStack,
+  Link,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
+  Text,
+} from "@chakra-ui/react";
+import { PackageData } from "../domain/package";
+import { Navigation } from "../domain/navigation";
+import { Resource } from "../hooks/usePackageSearch";
+import { Changelog, ReleaseNotes } from "../services/releases";
 import { FilterTab } from "./FilterTab";
-import { MemoizeTab } from "./MemoizeTab";
-import { ClosableTab } from "./ClosableTab";
 import { PackageInfo } from "./PackageInfo";
-
-interface PackageTabsProps {
-  versions: string[];
-  githubInformation: TabInformation[];
-  changelog: string;
-  onClickVersion: (version: string) => void;
-  onCloseVersionTab: (version: string) => void;
-  packageName: string;
-  description: string;
-  author: string;
-  license: string;
-  homepage: string;
-  keywords: string[];
-  latestVersion: string;
-  githubUrl: string;
+import { ReleasePanel, MarkdownContent, Loading } from "./ReleasePanel";
+import { Comparison } from "./Comparison";
+interface Props {
+  pkg: PackageData;
+  openVersions: string[];
+  notes: Record<string, Resource<ReleaseNotes>>;
+  changelog: Resource<Changelog | null>;
+  active: string;
+  onActive: (key: string) => void;
+  onOpen: (version: string) => void;
+  onClose: (version: string) => void;
+  loadRelease: (version: string, retry?: boolean) => Promise<ReleaseNotes>;
+  loadChangelog: (retry?: boolean) => Promise<void>;
+  navigation: Navigation;
+  onNavigate: (patch: Partial<Navigation>) => void;
+  authRevision: number;
 }
-
-export const PackageTabs: React.FC<PackageTabsProps> = ({
-  versions,
-  githubInformation,
-  changelog,
-  onClickVersion,
-  onCloseVersionTab,
-  packageName,
-  description,
-  author,
-  license,
-  homepage,
-  keywords,
-  latestVersion,
-  githubUrl,
-}) => {
-  const [tabIndex, setTabIndex] = React.useState(0);
-
-  const handleTabChange = (index: number) => {
-    setTabIndex(index);
+export function PackageTabs(props: Props) {
+  const {
+    pkg,
+    active,
+    notes,
+    changelog,
+    loadChangelog,
+    loadRelease,
+    authRevision,
+  } = props;
+  const ids = [
+    "versions",
+    "compare",
+    ...props.openVersions.map((v) => `version:${v}`),
+    "changelog",
+    "info",
+  ];
+  const index = Math.max(0, ids.indexOf(active));
+  useEffect(() => {
+    if (active === "changelog") void loadChangelog();
+    if (active.startsWith("version:"))
+      void loadRelease(active.slice(8)).catch(() => undefined);
+  }, [active, loadChangelog, loadRelease, authRevision]);
+  const retry = (version: string) => {
+    void loadRelease(version, true).catch(() => undefined);
   };
-
-  const handleCloseVersionTab = (version: string) => {
-    onCloseVersionTab(version);
-    setTabIndex(0);
-  };
-
-  if (versions.length === 0) {
-    return null;
-  }
-
   return (
-    <Tabs marginTop="4" index={tabIndex} onChange={handleTabChange}>
-      <TabList>
-        {versions.length > 0 && <Tab>VERSIONS</Tab>}
-        {githubInformation.length > 0 &&
-          githubInformation.map(info => (
-            <ClosableTab
-              key={`tab-${info.version}`}
-              label={`v${info.version}`}
-              onClose={() => handleCloseVersionTab(info.version)}
+    <Tabs
+      mt={6}
+      index={index}
+      onChange={(i) => props.onActive(ids[i])}
+      isLazy
+      lazyBehavior="keepMounted"
+      variant="line"
+      colorScheme="teal"
+    >
+      <TabList
+        overflowX="auto"
+        overflowY="hidden"
+        whiteSpace="nowrap"
+        aria-label="Package views"
+      >
+        <Tab>Versions</Tab>
+        <Tab>Compare</Tab>
+        {props.openVersions.map((version) => (
+          <HStack key={version} spacing={0} align="stretch">
+            <Tab>{version}</Tab>
+            <CloseButton
+              alignSelf="center"
+              size="sm"
+              aria-label={`Close notes for ${version}`}
+              onClick={() => {
+                if (active === `version:${version}`) props.onActive("versions");
+                props.onClose(version);
+              }}
             />
-          ))}
-        {changelog && <Tab>CHANGELOG.md</Tab>}
-        <Tab>INFO</Tab>
+          </HStack>
+        ))}
+        <Tab>Changelog</Tab>
+        <Tab>Info</Tab>
       </TabList>
       <TabPanels>
-        {versions.length > 0 && (
-          <FilterTab onClickVersion={onClickVersion} versions={versions} />
-        )}
-        {githubInformation.length > 0 &&
-          githubInformation.map(info => (
-            <MemoizeTab
-              key={`tabpanel-${info.version}`}
-              info={info.releaseInformation}
-            />
-          ))}
-        {changelog && <MemoizeTab info={changelog} />}
-        <TabPanel>
-          <PackageInfo
-            packageName={packageName}
-            description={description}
-            author={author}
-            license={license}
-            homepage={homepage}
-            keywords={keywords}
-            latestVersion={latestVersion}
-            githubUrl={githubUrl}
+        <TabPanel px={{ base: 0, md: 4 }}>
+          <FilterTab
+            key={pkg.packageName}
+            versions={pkg.versions}
+            latestVersion={pkg.latestVersion}
+            includePrereleases={props.navigation.prereleases}
+            onClickVersion={props.onOpen}
           />
+        </TabPanel>
+        <TabPanel px={{ base: 0, md: 4 }}>
+          {active === "compare" && (
+            <Comparison
+              pkg={pkg}
+              navigation={props.navigation}
+              onNavigate={props.onNavigate}
+              notes={notes}
+              load={loadRelease}
+              authRevision={authRevision}
+            />
+          )}
+        </TabPanel>
+        {props.openVersions.map((version) => (
+          <TabPanel key={version} px={{ base: 0, md: 4 }}>
+            {active === `version:${version}` && (
+              <ReleasePanel
+                resource={notes[version]}
+                onRetry={() => retry(version)}
+              />
+            )}
+          </TabPanel>
+        ))}
+        <TabPanel px={{ base: 0, md: 4 }}>
+          {(changelog.status === "idle" || changelog.status === "loading") && (
+            <Loading label="Loading changelog…" />
+          )}
+          {changelog.status === "error" && (
+            <Box>
+              <Text role="alert" mb={3}>
+                {changelog.error}
+              </Text>
+              <Button onClick={() => void loadChangelog(true)}>
+                Retry changelog
+              </Button>
+            </Box>
+          )}
+          {active === "changelog" &&
+            changelog.status === "success" &&
+            (changelog.data ? (
+              <>
+                <Link
+                  isExternal
+                  href={changelog.data.url}
+                  display="inline-block"
+                  mb={4}
+                >
+                  View changelog on GitHub
+                </Link>
+                <Suspense fallback={<Loading />}>
+                  <MarkdownContent
+                    body={changelog.data.body}
+                    baseUrl={changelog.data.baseUrl}
+                  />
+                </Suspense>
+              </>
+            ) : (
+              <Text>
+                No changelog was found in the package directory or repository
+                root.
+                {pkg.githubUrl && (
+                  <>
+                    {" "}
+                    <Link href={pkg.githubUrl} isExternal>
+                      Browse the repository.
+                    </Link>
+                  </>
+                )}
+              </Text>
+            ))}
+        </TabPanel>
+        <TabPanel px={{ base: 0, md: 4 }}>
+          <PackageInfo {...pkg} />
         </TabPanel>
       </TabPanels>
     </Tabs>
   );
-};
+}

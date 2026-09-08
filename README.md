@@ -1,63 +1,92 @@
-
 # Release Notes Finder
 
-**Release Notes Finder** is a web utility to quickly explore all versions of any NPM package and access their GitHub release notes, with smart search, local history, and optimized navigation.
+Browse npm package versions and their GitHub release notes, or read the changes between two versions.
 
-🚀 **Live app**: [maxgfr.github.io/release-notes-finder](https://maxgfr.github.io/release-notes-finder/)
-
-![Demo](https://raw.githubusercontent.com/maxgfr/release-notes-finder/main/.github/assets/record.gif)
-
----
+[Open the app](https://maxgfr.github.io/release-notes-finder/)
 
 ## Features
 
-- 🔍 **Instant NPM package search** with autocomplete
-- 🕑 **Local search history** (browser-based)
-- 🏷️ **Smart version filtering** (major, minor, patch, latest)
-- 🗂️ **Tabbed navigation** (versions, changelog, info)
-- 📝 **GitHub release notes** for each version
-- 🏷️ **Monorepo support** (Next.js, etc.)
-- ⌨️ **Keyboard navigation** (arrows, enter, escape)
-- 🔗 **Direct links** to GitHub and NPM
+- Package autocomplete, keyboard navigation and ten recent searches stored locally.
+- SemVer sorting, text and major/minor/patch filters, latest per major, and optional prereleases. Lists show 50 versions per page.
+- Release-note tabs, a package information panel, and an on-demand changelog reader.
+- Repository detection for HTTPS, SSH and GitHub shorthand, including scoped packages and monorepo directories.
+- **Upgrade notes**: published notes for versions greater than A and less than or equal to B, oldest first.
+- **Side by side**: notes for A and B, displayed in columns on desktop and stacked on mobile.
+- Comparisons load five versions at a time. Stop, continue, or retry unfinished entries without fetching successful entries again.
+- Shareable package, version and comparison links; browser back/forward support.
+- An English interface, light/dark themes, labeled controls and keyboard-accessible actions.
 
----
+Selecting a version opens a tab without switching away from the version list. Select the tab to read its notes.
 
-## Usage
+### GitHub access
 
-1. **Search**: Type an NPM package name in the search bar.
-2. **History**: Click a package from your local history to reload it.
-3. **Versions**: Browse versions, click to open a tab (does not auto-switch).
-4. **Release Notes**: View release notes fetched from GitHub.
-5. **Info**: See the NPM info card (description, author, license, keywords).
+No account or token is required for public packages. Expand **GitHub access (optional)** to enter a personal access token if you need a higher request limit. The token stays in the current tab's memory, is sent only to `https://api.github.com`, and disappears on reload. It is never saved in browser storage or shared URLs. You can replace or remove it at any time.
 
----
+GitHub requests are serialized. A quota response pauses further requests until the service's retry time; use the retry controls afterward or add a token. See [GitHub's rate-limit guidance](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api).
 
-## Local development
+### Shared links
 
-```bash
-git clone https://github.com/maxgfr/release-notes-finder.git
-cd release-notes-finder
-yarn
+Existing `?q=react` links remain supported:
+
+```text
+?q=react&version=18.2.0
+?q=react&from=18.0.0&to=18.2.0&view=range
+?q=react&from=18.0.0&to=18.2.0&view=side-by-side&prereleases=1
+```
+
+When comparison parameters are present, they take precedence over `version`. Invalid selections display guidance. The target must be newer than the starting version. Prereleases are excluded by default from intermediate versions; an explicitly selected prerelease endpoint is always included.
+
+### Cache and content
+
+Successful HTTP responses are cached in memory for five minutes, with a limit of 200 responses / approximately 20 MiB of serialized text. Oversized responses are not cached. **Refresh package** invalidates the cache and reloads the package. Changing the token purges GitHub data.
+
+Markdown is loaded only when needed, supports tables and sanitized HTML, and resolves relative links from the repository. Scripts, embedded frames and unsafe URLs are removed. A release with an empty body, a Git tag without a release and missing notes are reported separately.
+
+## Development
+
+Use Node.js 24 (Node.js 22+ is supported) and Yarn 1.22.22:
+
+```sh
+corepack enable
+yarn install --frozen-lockfile
 yarn dev
 ```
 
----
+Production and validation:
 
-## Tech stack
+```sh
+yarn playwright install chromium
+yarn validate
+```
 
-- **React** + **TypeScript**
-- **Chakra UI** (UI components)
-- **NPM Registry API** & **GitHub API**
-- **localStorage** (history)
-- **Deployment**: GitHub Pages
+`yarn validate` runs TypeScript, deterministic Jest tests, the production build, an initial JavaScript size budget and Playwright scenarios on desktop and mobile Chromium. Browser tests mock npm and GitHub, including HTTP errors, quotas and hostile Markdown. On a Linux CI runner, install browser system dependencies with `yarn playwright install --with-deps chromium`.
 
----
+To serve an existing build or run the optional real-service smoke check:
 
-## Contributing
+```sh
+node scripts/serve-build.cjs
+# In another terminal:
+node scripts/smoke-live.cjs
+```
 
-PRs are welcome! For suggestions or bugs, please open an issue.
+The smoke check reads public npm/GitHub data for React, Babel and Next.js; its result depends on connectivity and available GitHub quota. It does not use a token.
 
----
+## Architecture
+
+- `src/domain`: package/repository normalization, SemVer filters, comparison ranges and share-link encoding.
+- `src/services`: bounded HTTP cache, cancellation, request serialization, authentication, error classification and release/changelog resolution.
+- `src/hooks`: package lifetimes, per-version request deduplication, autocomplete and search history.
+- `src/components`: the package browser, comparison controls, optional token settings and a lazy Markdown renderer.
+
+The application remains a static React/Chakra UI app built with Create React App. GitHub Pages publication runs only after **Validate** succeeds on a push to `main`, using that exact revision and the existing `gh-pages` branch. No hosting-setting migration is required. Workflow publication itself must be verified on GitHub; local checks do not deploy the site.
+
+## Limits
+
+Release naming differs between projects. The resolver tries `vVERSION`, `VERSION`, `PACKAGE@VERSION`, and the unscoped package form. It remembers successful conventions during the session; it cannot infer every custom tag scheme. Changelog lookup checks `CHANGELOG.md`, `changelog.md`, `CHANGES.md` and `HISTORY.md` in the package directory, then the repository root. Very large files may require opening GitHub directly.
+
+Comparisons show the original published notes, not a generated summary or a complete commit diff. Missing or empty notes are explicitly marked. Private registries, OAuth and a backend are outside this implementation.
+
+See [validation and performance measurements](VALIDATION.md).
 
 ## License
 

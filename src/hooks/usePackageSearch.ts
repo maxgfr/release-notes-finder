@@ -1,357 +1,224 @@
-import * as React from "react";
-import type { TabInformation } from "../types";
-
-interface PackageData {
-  versions: string[];
-  githubUser: string;
-  githubRepoName: string;
-  githubUrl: string;
-  changelog: string;
-  packageName: string;
-  description: string;
-  author: string;
-  license: string;
-  homepage: string;
-  keywords: string[];
-  latestVersion: string;
-}
-
-interface UsePackageSearchReturn {
-  packageData: PackageData;
-  githubInformation: TabInformation[];
-  isFetching: boolean;
-  hasErrorSearch: boolean;
-  hasErrorGithub: boolean;
-  hasRateLimitError: boolean;
-  searchPackage: (packageName: string) => Promise<void>;
-  fetchVersionReleaseNotes: (version: string) => Promise<void>;
-  closeVersionTab: (version: string) => void;
-  resetAll: () => void;
-}
-
-const initialPackageData: PackageData = {
-  versions: [],
-  githubUser: "",
-  githubRepoName: "",
-  githubUrl: "",
-  changelog: "",
-  packageName: "",
-  description: "",
-  author: "",
-  license: "",
-  homepage: "",
-  keywords: [],
-  latestVersion: "",
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  emptyPackage,
+  isPackageName,
+  normalizeName,
+  normalizePackage,
+  PackageData,
+} from "../domain/package";
+import { ApiClient, errorMessage, isAbort } from "../services/client";
+import { Changelog, ReleaseNotes, ReleaseService } from "../services/releases";
+export type Resource<T> = {
+  status: "idle" | "loading" | "success" | "error";
+  data?: T;
+  error?: string;
 };
-
-export const usePackageSearch = (): UsePackageSearchReturn => {
-  const [packageData, setPackageData] = React.useState<PackageData>(initialPackageData);
-  const [githubInformation, setGithubInformation] = React.useState<TabInformation[]>([]);
-  const [isFetching, setIsFetching] = React.useState(false);
-  const [hasErrorSearch, setHasErrorSearch] = React.useState(false);
-  const [hasErrorGithub, setHasErrorGithub] = React.useState(false);
-  const [hasRateLimitError, setHasRateLimitError] = React.useState(false);
-
-  // Ref to always have the latest values in callbacks
-  const packageDataRef = React.useRef<PackageData>(initialPackageData);
-  React.useEffect(() => {
-    packageDataRef.current = packageData;
-  }, [packageData]);
-
-  const resetAll = React.useCallback(() => {
-    setPackageData(initialPackageData);
-    setGithubInformation([]);
-    setHasErrorSearch(false);
-    setHasErrorGithub(false);
-    setHasRateLimitError(false);
+export function usePackageSearch() {
+  const [client] = useState(() => new ApiClient());
+  const [service] = useState(() => new ReleaseService(client));
+  const [packageData, setPackageData] = useState<PackageData>(emptyPackage);
+  const [packageStatus, setPackageStatus] = useState<Resource<PackageData>>({
+    status: "idle",
+  });
+  const [notes, setNotes] = useState<Record<string, Resource<ReleaseNotes>>>(
+    {},
+  );
+  const [openVersions, setOpenVersions] = useState<string[]>([]);
+  const [changelog, setChangelog] = useState<Resource<Changelog | null>>({
+    status: "idle",
+  });
+  const pkgRef = useRef(emptyPackage);
+  const notesRef = useRef(notes);
+  const changelogRef = useRef(changelog);
+  const changelogTime = useRef(0);
+  const pending = useRef(new Map<string, Promise<ReleaseNotes>>());
+  const noteTimes = useRef(new Map<string, number>());
+  const lifetime = useRef(new AbortController());
+  const sequence = useRef(0);
+  const invalidate = useCallback(() => {
+    sequence.current++;
+    lifetime.current.abort();
+    lifetime.current = new AbortController();
+    pending.current.clear();
   }, []);
-
-  const searchPackage = React.useCallback(async (searchValue: string) => {
-    if (!searchValue) return;
-
-    resetAll();
-    setIsFetching(true);
-
-    try {
-      const npmInfo = await fetch(`https://registry.npmjs.org/${searchValue}`);
-
-      if (!npmInfo.ok) {
-        setIsFetching(false);
-        setHasErrorSearch(true);
+  useEffect(
+    () => () => {
+      invalidate();
+      client.dispose();
+    },
+    [client, invalidate],
+  );
+  const updateNotes = useCallback(
+    (version: string, state: Resource<ReleaseNotes>) => {
+      notesRef.current = { ...notesRef.current, [version]: state };
+      setNotes(notesRef.current);
+    },
+    [],
+  );
+  const clearResources = useCallback(() => {
+    notesRef.current = {};
+    noteTimes.current.clear();
+    setNotes({});
+    changelogRef.current = { status: "idle" };
+    setChangelog(changelogRef.current);
+  }, []);
+  const searchPackage = useCallback(
+    async (value: string, refresh = false): Promise<void> => {
+      invalidate();
+      const id = sequence.current;
+      clearResources();
+      setOpenVersions([]);
+      pkgRef.current = emptyPackage;
+      setPackageData(emptyPackage);
+      const name = normalizeName(value);
+      if (!name) {
+        setPackageStatus({ status: "idle" });
         return;
       }
-
-      const npmInfoJson = await npmInfo.json();
-
-      const sortedVersions = Object.keys(npmInfoJson.versions)
-        .filter(version => !version.includes("-"))
-        .sort((a, b) => {
-          const aSplit = a.split(".");
-          const bSplit = b.split(".");
-          if (aSplit[0] !== bSplit[0]) {
-            return parseInt(bSplit[0]) - parseInt(aSplit[0]);
-          }
-          if (aSplit[1] !== bSplit[1]) {
-            return parseInt(bSplit[1]) - parseInt(aSplit[1]);
-          }
-          return parseInt(bSplit[2]) - parseInt(aSplit[2]);
+      if (!isPackageName(name)) {
+        setPackageStatus({
+          status: "error",
+          error:
+            "Enter a valid npm package name, such as react or @babel/core.",
         });
-
-      // Retrieve NPM info
-      const description = npmInfoJson.description || "";
-      const author = typeof npmInfoJson.author === "string" 
-        ? npmInfoJson.author 
-        : npmInfoJson.author?.name || "";
-      const license = npmInfoJson.license || "";
-      const homepage = npmInfoJson.homepage || "";
-      const keywords = npmInfoJson.keywords || [];
-
-      // Extract GitHub URL from repository or bugs
-      let githubUrl = "";
-      let extractedGithubUser = "";
-      let extractedGithubRepoName = "";
-      
-      // Priority: repository.url, then bugs.url (to get the correct GitHub link)
-      const repoUrl = npmInfoJson.repository?.url || "";
-      const bugsUrl = npmInfoJson.bugs?.url || "";
-      
-      if (repoUrl?.includes("github.com")) {
-        githubUrl = repoUrl;
-      } else if (bugsUrl?.includes("github.com")) {
-        githubUrl = bugsUrl;
-      } else if (homepage?.includes("github.com")) {
-        githubUrl = homepage;
-      }
-
-      // Clean githubUrl before extracting user and repo name
-      const cleanGithubUrl = githubUrl.replace("git+", "").replace(/\.git$/, "");
-
-      if (cleanGithubUrl) {
-        extractedGithubUser = cleanGithubUrl.split("/")[3] || "";
-        // Extract repo name: remove .git extension and fragment (#...), but keep dots in name (e.g., next.js)
-        const repoPath = cleanGithubUrl.split("/")[4] || "";
-        extractedGithubRepoName = repoPath?.split("#")[0] || ""; // Remove fragment (#...)
-      }
-
-      setPackageData({
-        versions: sortedVersions,
-        packageName: searchValue,
-        githubUser: extractedGithubUser,
-        githubRepoName: extractedGithubRepoName,
-        githubUrl: cleanGithubUrl,
-        changelog: "",
-        description,
-        author,
-        license,
-        homepage,
-        keywords,
-        latestVersion: npmInfoJson["dist-tags"]?.latest || sortedVersions[0] || "",
-      });
-
-      // Fetch only the CHANGELOG from GitHub if available
-      if (extractedGithubUser && extractedGithubRepoName) {
-        fetch(`https://api.github.com/repos/${extractedGithubUser}/${extractedGithubRepoName}/contents/CHANGELOG.md`)
-          .then(async (changelogRes) => {
-            try {
-              const changelogJson = await changelogRes.json();
-              if (changelogJson.content) {
-                setPackageData(prev => ({
-                  ...prev,
-                  changelog: atob(changelogJson.content),
-                }));
-              }
-            } catch {
-              // CHANGELOG not found
-            }
-          })
-          .finally(() => {
-            setIsFetching(false);
-          });
-      } else {
-        setIsFetching(false);
-      }
-    } catch {
-      setIsFetching(false);
-      setHasErrorSearch(true);
-    }
-  }, [resetAll]);
-
-  const fetchVersionReleaseNotes = React.useCallback(async (version: string) => {
-    const { githubUser, githubRepoName, packageName } = packageDataRef.current;
-    
-    if (!githubUser || !githubRepoName) {
-      setHasErrorGithub(true);
-      return;
-    }
-
-    setIsFetching(true);
-    setHasErrorGithub(false);
-    setHasRateLimitError(false);
-
-    // Try the most common format first: v{version}
-    const primaryFormat = `v${version}`;
-    let found = false;
-    let shouldTryAlternatives = false;
-    
-    try {
-      const releaseRes = await fetch(
-        `https://api.github.com/repos/${githubUser}/${githubRepoName}/releases/tags/${primaryFormat}`
-      );
-      
-      if (releaseRes.status === 403) {
-        setHasRateLimitError(true);
-        setIsFetching(false);
         return;
       }
-      
-      if (releaseRes.ok) {
-        const releaseData = await releaseRes.json();
-        if (releaseData.body) {
-          const info: TabInformation = {
-            releaseInformation: releaseData.body,
-            version,
+      setPackageStatus({ status: "loading" });
+      try {
+        if (refresh) client.clear();
+        const data = await client.get(
+          `https://registry.npmjs.org/${encodeURIComponent(name)}`,
+          lifetime.current.signal,
+        );
+        const pkg = normalizePackage(data, name);
+        if (id !== sequence.current) return;
+        pkgRef.current = pkg;
+        setPackageData(pkg);
+        setPackageStatus({ status: "success", data: pkg });
+      } catch (error) {
+        if (id === sequence.current && !isAbort(error))
+          setPackageStatus({ status: "error", error: errorMessage(error) });
+      }
+    },
+    [client, invalidate, clearResources],
+  );
+  const loadRelease = useCallback(
+    (version: string, retry = false): Promise<ReleaseNotes> => {
+      const pkg = pkgRef.current;
+      const saved = notesRef.current[version];
+      if (
+        !retry &&
+        saved?.status === "success" &&
+        saved.data &&
+        Date.now() - (noteTimes.current.get(version) || 0) < 300000
+      )
+        return Promise.resolve(saved.data);
+      const existing = pending.current.get(version);
+      if (existing) return existing;
+      if (!pkg.versions.includes(version))
+        return Promise.reject(
+          new Error("This version does not exist in the selected package."),
+        );
+      const id = sequence.current;
+      updateNotes(version, { status: "loading" });
+      const promise = service
+        .release(pkg, version, lifetime.current.signal)
+        .then((data) => {
+          if (id === sequence.current) {
+            noteTimes.current.set(version, Date.now());
+            updateNotes(version, { status: "success", data });
+          }
+          return data;
+        })
+        .catch((error) => {
+          if (id === sequence.current && !isAbort(error))
+            updateNotes(version, {
+              status: "error",
+              error: errorMessage(error),
+            });
+          throw error;
+        })
+        .finally(() => {
+          if (pending.current.get(version) === promise)
+            pending.current.delete(version);
+        });
+      pending.current.set(version, promise);
+      return promise;
+    },
+    [service, updateNotes],
+  );
+  const fetchVersionReleaseNotes = useCallback(
+    async (version: string) => {
+      if (!pkgRef.current.versions.includes(version)) return;
+      setOpenVersions((prev) =>
+        prev.includes(version) ? prev : [...prev, version],
+      );
+      try {
+        await loadRelease(version);
+      } catch {
+        /* The version panel owns the error. */
+      }
+    },
+    [loadRelease],
+  );
+  const closeVersionTab = useCallback(
+    (version: string) =>
+      setOpenVersions((prev) => prev.filter((v) => v !== version)),
+    [],
+  );
+  const loadChangelog = useCallback(
+    async (retry = false) => {
+      if (
+        !retry &&
+        (changelogRef.current.status === "loading" ||
+          (changelogRef.current.status === "success" &&
+            Date.now() - changelogTime.current < 300000))
+      )
+        return;
+      const id = sequence.current;
+      changelogRef.current = { status: "loading" };
+      setChangelog(changelogRef.current);
+      try {
+        const data = await service.changelog(
+          pkgRef.current,
+          lifetime.current.signal,
+        );
+        if (id === sequence.current) {
+          changelogTime.current = Date.now();
+          changelogRef.current = { status: "success", data };
+          setChangelog(changelogRef.current);
+        }
+      } catch (error) {
+        if (id === sequence.current && !isAbort(error)) {
+          changelogRef.current = {
+            status: "error",
+            error: errorMessage(error),
           };
-          setGithubInformation(prev => {
-            const exists = prev.find(v => v.version === version);
-            if (exists) return prev;
-            return [...prev, info];
-          });
-          found = true;
-        }
-      } else if (releaseRes.status === 404) {
-        // Release not found with this format, try alternatives
-        shouldTryAlternatives = true;
-      }
-    } catch {
-      // Network error, try alternatives
-      shouldTryAlternatives = true;
-    }
-
-    // If not found with v{version}, try other formats only if 404
-    if (!found && shouldTryAlternatives) {
-      const alternativeFormats = [version, `${packageName}@${version}`];
-
-      // If it's a scoped package, add the format without scope
-      if (packageName.startsWith("@")) {
-        const scopedName = packageName.split("/")[1];
-        if (scopedName) {
-          alternativeFormats.push(`${scopedName}@${version}`);
+          setChangelog(changelogRef.current);
         }
       }
-
-      for (const tagFormat of alternativeFormats) {
-        if (found) break;
-        
-        try {
-          const releaseRes = await fetch(
-            `https://api.github.com/repos/${githubUser}/${githubRepoName}/releases/tags/${tagFormat}`
-          );
-          
-          if (releaseRes.status === 403) {
-            setHasRateLimitError(true);
-            setIsFetching(false);
-            return;
-          }
-          
-          if (releaseRes.ok) {
-            const releaseData = await releaseRes.json();
-            if (releaseData.body) {
-              const info: TabInformation = {
-                releaseInformation: releaseData.body,
-                version,
-              };
-              setGithubInformation(prev => {
-                const exists = prev.find(v => v.version === version);
-                if (exists) return prev;
-                return [...prev, info];
-              });
-              found = true;
-              break;
-            }
-          } else if (releaseRes.status !== 404) {
-            // If it's not a 404, stop trying
-            break;
-          }
-        } catch {
-          // Format failed, continue
-        }
-      }
-    }
-
-    // As a last resort, check if a tag exists (without release) - only if we had to try alternatives
-    if (!found && shouldTryAlternatives) {
-      const allFormats = [
-        `v${version}`,
-        version,
-        `${packageName}@${version}`,
-      ];
-
-      if (packageName.startsWith("@")) {
-        const scopedName = packageName.split("/")[1];
-        if (scopedName) {
-          allFormats.push(`${scopedName}@${version}`);
-        }
-      }
-
-      for (const tagFormat of allFormats) {
-        if (found) break;
-        
-        try {
-          const tagRes = await fetch(
-            `https://api.github.com/repos/${githubUser}/${githubRepoName}/git/refs/tags/${tagFormat}`
-          );
-          
-          if (tagRes.status === 403) {
-            setHasRateLimitError(true);
-            setIsFetching(false);
-            return;
-          }
-          
-          if (tagRes.ok) {
-            const tagData = await tagRes.json();
-            if (tagData.object) {
-              const info: TabInformation = {
-                releaseInformation: `# Version ${version}\n\nNo release notes available for this version.\n\n[View on GitHub](https://github.com/${githubUser}/${githubRepoName}/releases/tag/${tagFormat})`,
-                version,
-              };
-              setGithubInformation(prev => {
-                const exists = prev.find(v => v.version === version);
-                if (exists) return prev;
-                return [...prev, info];
-              });
-              found = true;
-              break;
-            }
-          } else if (tagRes.status !== 404) {
-            // If it's not a 404, stop trying
-            break;
-          }
-        } catch {
-          // Tag not found
-        }
-      }
-    }
-
-    if (!found) {
-      setHasErrorGithub(true);
-    }
-    setIsFetching(false);
-  }, []);
-
-  const closeVersionTab = React.useCallback((version: string) => {
-    setGithubInformation(prev => prev.filter(info => info.version !== version));
-  }, []);
-
+    },
+    [service],
+  );
+  const setGithubToken = useCallback(
+    (token: string) => {
+      invalidate();
+      client.setToken(token);
+      clearResources();
+    },
+    [invalidate, client, clearResources],
+  );
   return {
     packageData,
-    githubInformation,
-    isFetching,
-    hasErrorSearch,
-    hasErrorGithub,
-    hasRateLimitError,
+    packageStatus,
+    notes,
+    openVersions,
+    changelog,
     searchPackage,
+    loadRelease,
     fetchVersionReleaseNotes,
     closeVersionTab,
-    resetAll,
+    loadChangelog,
+    setGithubToken,
   };
-};
+}

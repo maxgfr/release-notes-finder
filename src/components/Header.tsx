@@ -1,17 +1,17 @@
-import { Box, Heading, Image } from "@chakra-ui/react";
+import { Flex, Heading, Image } from "@chakra-ui/react";
 import { ColorModeSwitcher } from "./ColorModeSwitcher";
-
-export const Header = () => {
+export function Header() {
   return (
-    <>
-      <Box display="flex" flexDirection="row" justifyContent="space-between">
-        <Box />
-        <Heading textAlign="center">Release notes finder</Heading>
-        <ColorModeSwitcher />
-      </Box>
-      <Box display="flex" justifyContent="center" marginY="4">
-        <Image src="icon.svg" width="120px" height="120px" />
-      </Box>
-    </>
+    <Flex as="header" align="center" gap={3}>
+      <Image
+        src={`${process.env.PUBLIC_URL || "."}/icon.svg`}
+        alt=""
+        boxSize={{ base: "40px", md: "56px" }}
+      />
+      <Heading as="h1" size={{ base: "md", md: "lg" }} flex={1}>
+        Release Notes Finder
+      </Heading>
+      <ColorModeSwitcher />
+    </Flex>
   );
-};
+}

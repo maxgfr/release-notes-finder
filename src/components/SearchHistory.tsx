@@ -3,45 +3,46 @@ import {
   Text,
   Wrap,
   WrapItem,
-  Tag,
-  TagLabel,
-  TagCloseButton,
+  Button,
+  CloseButton,
+  HStack,
 } from "@chakra-ui/react";
-
-interface SearchHistoryProps {
-  history: string[];
-  onSelect: (packageName: string) => void;
-  onRemove: (packageName: string) => void;
-}
-
-export const SearchHistory = ({
+export function SearchHistory({
   history,
   onSelect,
   onRemove,
-}: SearchHistoryProps) => {
-  if (history.length === 0) return null;
-
+}: {
+  history: string[];
+  onSelect: (name: string) => void;
+  onRemove: (name: string) => void;
+}) {
+  if (!history.length) return null;
   return (
-    <Box marginY="2">
-      <Text fontSize="sm" color="gray.500" marginBottom="2">
-        Historique de recherche:
+    <Box my={2}>
+      <Text fontSize="sm" mb={2}>
+        Recent searches
       </Text>
       <Wrap justify="center">
-        {history.map(item => (
-          <WrapItem key={item}>
-            <Tag
-              size="md"
-              borderRadius="full"
-              variant="solid"
-              colorScheme="teal"
-              cursor="pointer"
-            >
-              <TagLabel onClick={() => onSelect(item)}>{item}</TagLabel>
-              <TagCloseButton onClick={() => onRemove(item)} />
-            </Tag>
+        {history.map((name) => (
+          <WrapItem key={name}>
+            <HStack spacing={0} borderWidth="1px" borderRadius="md">
+              <Button
+                variant="ghost"
+                size="sm"
+                colorScheme="teal"
+                onClick={() => onSelect(name)}
+              >
+                {name}
+              </Button>
+              <CloseButton
+                size="sm"
+                aria-label={`Remove ${name} from history`}
+                onClick={() => onRemove(name)}
+              />
+            </HStack>
           </WrapItem>
         ))}
       </Wrap>
     </Box>
   );
-};
+}

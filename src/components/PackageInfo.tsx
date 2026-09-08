@@ -1,4 +1,12 @@
-import { Box, Heading, Text, Badge, HStack, VStack, Link } from "@chakra-ui/react";
+import {
+  Box,
+  Heading,
+  Text,
+  Badge,
+  HStack,
+  VStack,
+  Link,
+} from "@chakra-ui/react";
 
 export const PackageInfo = ({
   packageName,
@@ -22,7 +30,13 @@ export const PackageInfo = ({
   if (!packageName) return null;
 
   return (
-    <Box p={6} borderRadius="md" bg="white" _dark={{ bg: "gray.700" }} boxShadow="md">
+    <Box
+      p={6}
+      borderRadius="md"
+      bg="white"
+      _dark={{ bg: "gray.700" }}
+      boxShadow="md"
+    >
       <VStack align="stretch" spacing={4}>
         <Box>
           <Heading size="lg" mb={2}>
@@ -46,15 +60,25 @@ export const PackageInfo = ({
         <HStack spacing={4} wrap="wrap">
           {author && (
             <Box>
-              <Text fontSize="sm" fontWeight="bold" color="gray.500">
-                Auteur
+              <Text
+                fontSize="sm"
+                fontWeight="bold"
+                color="gray.600"
+                _dark={{ color: "gray.300" }}
+              >
+                Author
               </Text>
               <Text fontSize="sm">{author}</Text>
             </Box>
           )}
           {license && (
             <Box>
-              <Text fontSize="sm" fontWeight="bold" color="gray.500">
+              <Text
+                fontSize="sm"
+                fontWeight="bold"
+                color="gray.600"
+                _dark={{ color: "gray.300" }}
+              >
                 License
               </Text>
               <Text fontSize="sm">{license}</Text>
@@ -64,10 +88,22 @@ export const PackageInfo = ({
 
         {homepage && (
           <Box>
-            <Text fontSize="sm" fontWeight="bold" color="gray.500" mb={1}>
-              Site web
+            <Text
+              fontSize="sm"
+              fontWeight="bold"
+              color="gray.600"
+              _dark={{ color: "gray.300" }}
+              mb={1}
+            >
+              Website
             </Text>
-            <Link href={homepage} isExternal color="teal.500" fontSize="sm">
+            <Link
+              href={homepage}
+              isExternal
+              color="teal.600"
+              _dark={{ color: "teal.200" }}
+              fontSize="sm"
+            >
               {homepage}
             </Link>
           </Box>
@@ -75,10 +111,22 @@ export const PackageInfo = ({
 
         {githubUrl && (
           <Box>
-            <Text fontSize="sm" fontWeight="bold" color="gray.500" mb={1}>
+            <Text
+              fontSize="sm"
+              fontWeight="bold"
+              color="gray.600"
+              _dark={{ color: "gray.300" }}
+              mb={1}
+            >
               GitHub
             </Text>
-            <Link href={githubUrl} isExternal color="teal.500" fontSize="sm">
+            <Link
+              href={githubUrl}
+              isExternal
+              color="teal.600"
+              _dark={{ color: "teal.200" }}
+              fontSize="sm"
+            >
               {githubUrl}
             </Link>
           </Box>
@@ -86,11 +134,17 @@ export const PackageInfo = ({
 
         {keywords && keywords.length > 0 && (
           <Box>
-            <Text fontSize="sm" fontWeight="bold" color="gray.500" mb={2}>
+            <Text
+              fontSize="sm"
+              fontWeight="bold"
+              color="gray.600"
+              _dark={{ color: "gray.300" }}
+              mb={2}
+            >
               Keywords
             </Text>
             <HStack spacing={2} wrap="wrap">
-              {keywords.map(keyword => (
+              {keywords.map((keyword) => (
                 <Badge key={keyword} colorScheme="gray" fontSize="xs">
                   {keyword}
                 </Badge>

@@ -1,38 +1,32 @@
-name: Github Pages
-
+name: GitHub Pages
 on:
-  push:
+  workflow_run:
+    workflows: [Validate]
+    types: [completed]
     branches: [main]
-
+permissions:
+  contents: write
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
 jobs:
-  storybook:
-    name: Deployment on gh-pages
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-      - name: Restore cache
-        uses: actions/cache@v3
+      - uses: actions/checkout@v6
         with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-      - name: Install dependencies
-        run: |
-          yarn install --prefer-offline --frozen-lockfile
-      - name: Modify homepage of the package.json locally
-        uses: maxgfr/github-change-json@main
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v6
         with:
-          key: 'homepage'
-          value: 'https://maxgfr.github.io/release-notes-finder'
-          path: package.json
-      - name: Deploy
-        run: |
-          git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
-          yarn deploy
+          node-version: 24
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+        env:
+          CI: true
+          PUBLIC_URL: /release-notes-finder
+      - name: Publish the validated revision
+        run: node scripts/deploy-pages.cjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
