@@ -19,6 +19,8 @@ import { Resource } from "../hooks/usePackageSearch";
 import { ReleaseNotes } from "../services/releases";
 import { ApiError, isAbort } from "../services/client";
 import { ReleasePanel } from "./ReleasePanel";
+import { RepositoryChanges } from "./RepositoryChanges";
+import { CompareLoader } from "../services/comparison";
 interface Props {
   pkg: PackageData;
   navigation: Navigation;
@@ -26,6 +28,7 @@ interface Props {
   notes: Record<string, Resource<ReleaseNotes>>;
   load: (version: string, retry?: boolean) => Promise<ReleaseNotes>;
   authRevision: number;
+  compareVersions: CompareLoader;
 }
 export function Comparison({
   pkg,
@@ -34,6 +37,7 @@ export function Comparison({
   notes,
   load,
   authRevision,
+  compareVersions,
 }: Props) {
   const [from, setFrom] = useState(navigation.from);
   const [to, setTo] = useState(navigation.to);
@@ -88,9 +92,12 @@ export function Comparison({
     const id = ++run.current;
     setRunning(true);
     setMessage("");
-    setVisible((prev) => Array.from(new Set([...prev, ...batch])));
+
     for (const version of batch) {
       if (id !== run.current) return;
+      setVisible((prev) =>
+        prev.includes(version) ? prev : [...prev, version],
+      );
       if (latestNotes.current[version]?.status === "success") continue;
       try {
         await load(version, retry);
@@ -117,9 +124,7 @@ export function Comparison({
     setMessage("");
     setRunning(false);
     if (versionsRef.current.length)
-      void loadBatchRef.current(
-        versionsRef.current.slice(0, navigation.view === "range" ? 5 : 2),
-      );
+      void loadBatchRef.current(versionsRef.current);
     return cancelRun;
   }, [
     navigation.from,
@@ -136,10 +141,14 @@ export function Comparison({
     !!valid(from) &&
     !!valid(to) &&
     gt(to, from);
+  const hasNewSelection =
+    from !== navigation.from ||
+    to !== navigation.to ||
+    view !== navigation.view;
   const completed = visible.filter(
     (v) => notes[v]?.status === "success",
   ).length;
-  const unresolved = visible.filter((v) => notes[v]?.status !== "success");
+  const unresolved = versions.filter((v) => notes[v]?.status !== "success");
   const missing = visible.filter(
     (v) => notes[v]?.status === "success" && notes[v]?.data?.status !== "notes",
   ).length;
@@ -149,7 +158,8 @@ export function Comparison({
         Compare versions
       </Heading>
       <Text mb={5}>
-        Read the changes in an upgrade, or view two releases side by side.
+        See what changed after your current version, up to and including the
+        target version.
       </Text>
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
         <FormControl>
@@ -189,15 +199,16 @@ export function Comparison({
             value={view}
             onChange={(e) => setView(e.target.value as Navigation["view"])}
           >
-            <option value="range">Upgrade notes</option>
-            <option value="side-by-side">Side by side</option>
+            <option value="changes">Changes between versions</option>
+            <option value="range">Release notes only</option>
+            <option value="side-by-side">Endpoint notes side by side</option>
           </Select>
         </FormControl>
       </SimpleGrid>
       <Button
         my={4}
         colorScheme="teal"
-        isDisabled={!draftValid || running}
+        isDisabled={!draftValid || (running && !hasNewSelection)}
         onClick={() => onNavigate({ from, to, view, version: "" })}
       >
         Compare
@@ -210,9 +221,30 @@ export function Comparison({
       )}
       {validPair && (
         <>
+          <Heading size="md" mb={2}>
+            {navigation.from} → {navigation.to}
+          </Heading>
+          <Text mb={5}>
+            {navigation.view === "side-by-side"
+              ? "These are the two endpoint notes only. Choose Changes between versions to include the full upgrade history."
+              : `Changes introduced after ${navigation.from}, through ${navigation.to}. ${versions.length} published versions in this interval.`}
+          </Text>
+          {navigation.view === "changes" && (
+            <RepositoryChanges
+              pkg={pkg}
+              from={navigation.from}
+              to={navigation.to}
+              load={compareVersions}
+              authRevision={authRevision}
+            />
+          )}
+          <Heading size="md" mb={3}>
+            {navigation.view === "side-by-side"
+              ? "Endpoint release notes"
+              : "Release notes throughout the upgrade"}
+          </Heading>
           <Text role="status" mb={3}>
-            {completed} of {visible.length} requested versions checked ·{" "}
-            {versions.length} in this comparison
+            {completed} of {versions.length} versions checked
             {missing > 0 ? ` · ${missing} without written notes` : ""}
             {running ? " · Loading…" : ""}
           </Text>
@@ -239,18 +271,6 @@ export function Comparison({
                 {unresolved.length > 0 && (
                   <Button onClick={() => void loadBatch(unresolved, true)}>
                     Resume / retry unfinished
-                  </Button>
-                )}
-                {visible.length < versions.length && (
-                  <Button
-                    onClick={() =>
-                      void loadBatch(
-                        versions.slice(visible.length, visible.length + 5),
-                      )
-                    }
-                  >
-                    Load next {Math.min(5, versions.length - visible.length)}{" "}
-                    versions
                   </Button>
                 )}
               </>

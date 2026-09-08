@@ -1,30 +1,22 @@
-import * as React from "react";
-import {
-  useColorMode,
-  useColorModeValue,
-  IconButton,
-  IconButtonProps,
-} from "@chakra-ui/react";
-import { FaMoon, FaSun } from "react-icons/fa";
-
-type ColorModeSwitcherProps = Omit<IconButtonProps, "aria-label">;
-
-export const ColorModeSwitcher: React.FC<ColorModeSwitcherProps> = (props) => {
-  const { toggleColorMode } = useColorMode();
-  const text = useColorModeValue("dark", "light");
-  const SwitchIcon = useColorModeValue(FaMoon, FaSun);
-
+import { Select } from "@chakra-ui/react";
+import { useThemePreference } from "../theme/ThemePreferenceProvider";
+import { ThemePreference } from "../theme/preference";
+export function ColorModeSwitcher() {
+  const { preference, setPreference } = useThemePreference();
   return (
-    <IconButton
-      size="md"
-      fontSize="lg"
-      variant="ghost"
-      color="current"
-      marginLeft="2"
-      onClick={toggleColorMode}
-      icon={<SwitchIcon />}
-      aria-label={`Switch to ${text} mode`}
-      {...props}
-    />
+    <Select
+      aria-label="Color theme"
+      title="Color theme"
+      value={preference}
+      onChange={(event) => setPreference(event.target.value as ThemePreference)}
+      width="auto"
+      minW="92px"
+      size="sm"
+      flexShrink={0}
+    >
+      <option value="auto">Auto</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </Select>
   );
-};
+}

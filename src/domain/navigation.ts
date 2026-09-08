@@ -3,7 +3,7 @@ export interface Navigation {
   version: string;
   from: string;
   to: string;
-  view: "range" | "side-by-side";
+  view: "changes" | "range" | "side-by-side";
   prereleases: boolean;
 }
 export function readNavigation(search = window.location.search): Navigation {
@@ -15,7 +15,12 @@ export function readNavigation(search = window.location.search): Navigation {
     version: from || to ? "" : params.get("version") || "",
     from,
     to,
-    view: params.get("view") === "side-by-side" ? "side-by-side" : "range",
+    view:
+      params.get("view") === "side-by-side"
+        ? "side-by-side"
+        : params.get("view") === "range"
+          ? "range"
+          : "changes",
     prereleases: params.get("prereleases") === "1",
   };
 }

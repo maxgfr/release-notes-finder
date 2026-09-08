@@ -2,6 +2,7 @@ import { PackageData, record, text, tagFormats } from "../domain/package";
 import { ApiClient, ApiError } from "./client";
 export interface ReleaseNotes {
   version: string;
+  tag?: string;
   body: string;
   url: string;
   baseUrl: string;
@@ -50,6 +51,7 @@ export class ReleaseService {
         const body = text(data.body);
         return {
           version,
+          tag: data.tag_name,
           body,
           url: `${repo.url}/releases/tag/${encodeURIComponent(data.tag_name)}`,
           baseUrl,
@@ -78,6 +80,7 @@ export class ReleaseService {
         this.formats.set(pkg.packageName, index);
         return {
           version,
+          tag,
           body: "",
           url: `${repo.url}/tree/${encodeURIComponent(tag)}`,
           baseUrl,

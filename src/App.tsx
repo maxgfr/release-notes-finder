@@ -266,6 +266,7 @@ export function App() {
             }}
             onClose={packages.closeVersionTab}
             loadRelease={packages.loadRelease}
+            compareVersions={packages.compareVersions}
             loadChangelog={packages.loadChangelog}
             navigation={navigation}
             onNavigate={(patch) => navigate(patch)}

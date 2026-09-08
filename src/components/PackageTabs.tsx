@@ -20,7 +20,9 @@ import { FilterTab } from "./FilterTab";
 import { PackageInfo } from "./PackageInfo";
 import { ReleasePanel, MarkdownContent, Loading } from "./ReleasePanel";
 import { Comparison } from "./Comparison";
+import { CompareLoader } from "../services/comparison";
 interface Props {
+  compareVersions: CompareLoader;
   pkg: PackageData;
   openVersions: string[];
   notes: Record<string, Resource<ReleaseNotes>>;
@@ -110,6 +112,7 @@ export function PackageTabs(props: Props) {
           {active === "compare" && (
             <Comparison
               pkg={pkg}
+              compareVersions={props.compareVersions}
               navigation={props.navigation}
               onNavigate={props.onNavigate}
               notes={notes}

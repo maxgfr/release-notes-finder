@@ -276,7 +276,7 @@ test("retries only failed comparison entries", async ({ page }) => {
     requests.filter((r) => r.url.endsWith("/releases/tags/v1.3.0")),
   ).toHaveLength(1);
 });
-test("stops a batch, resumes and loads the next five without duplicates", async ({
+test("stops loading and resumes the whole interval without duplicates", async ({
   page,
 }) => {
   await mockApis(page);
@@ -312,11 +312,6 @@ test("stops a batch, resumes and loads the next five without duplicates", async 
   ).toBeVisible();
   expect(calls).toHaveLength(1);
   await page.getByRole("button", { name: "Resume / retry unfinished" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Batch v1.5.0" }),
-  ).toBeVisible();
-  expect(calls).toHaveLength(5);
-  await page.getByRole("button", { name: "Load next 2 versions" }).click();
   await expect(
     page.getByText("All selected release notes have been loaded."),
   ).toBeVisible();
@@ -386,10 +381,12 @@ test("supports dark mode, clipboard sharing and keyboard tab navigation", async 
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
     "q=example&version=1.2.0",
   );
-  await page.getByRole("button", { name: "Switch to dark mode" }).click();
-  await expect(
-    page.getByRole("button", { name: "Switch to light mode" }),
-  ).toBeVisible();
+  await page
+    .getByRole("combobox", { name: "Color theme" })
+    .selectOption("dark");
+  await expect(page.getByRole("combobox", { name: "Color theme" })).toHaveValue(
+    "dark",
+  );
   await page.getByRole("tab", { name: "Versions", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(

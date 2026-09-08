@@ -122,6 +122,6 @@ it("roundtrips shared links without credentials and retains the deployed path", 
     "?q=%40babel%2Fcore&from=1.0.0&to=2.0.0&view=side-by-side&prereleases=1",
   );
   expect(readNavigation(new URL(navigationUrl(state)).search)).toEqual(state);
-  expect(readNavigation("?q=react&view=invalid").view).toBe("range");
+  expect(readNavigation("?q=react&view=invalid").view).toBe("changes");
   expect(readNavigation("?q=react&from=1.0.0&version=2.0.0").version).toBe("");
 });

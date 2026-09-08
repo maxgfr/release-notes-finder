@@ -1,20 +1,24 @@
-import { ChakraProvider, ColorModeScript } from "@chakra-ui/react";
+import { ChakraProvider } from "@chakra-ui/react";
 import * as React from "react";
 import * as ReactDOM from "react-dom/client";
 import { theme } from "./theme";
+import { initializeTheme, themeStorageManager } from "./theme/preference";
+import { ThemePreferenceProvider } from "./theme/ThemePreferenceProvider";
 import { App } from "./App";
 import reportWebVitals from "./reportWebVitals";
 import * as serviceWorker from "./serviceWorker";
 
 const container = document.getElementById("root");
 if (!container) throw new Error("Failed to find the root element");
+initializeTheme();
 const root = ReactDOM.createRoot(container);
 
 root.render(
   <React.StrictMode>
-    <ColorModeScript />
-    <ChakraProvider theme={theme}>
-      <App />
+    <ChakraProvider theme={theme} colorModeManager={themeStorageManager}>
+      <ThemePreferenceProvider>
+        <App />
+      </ThemePreferenceProvider>
     </ChakraProvider>
   </React.StrictMode>,
 );

@@ -17,6 +17,7 @@ export interface PackageData {
   keywords: string[];
   repository?: Repository;
   githubUrl: string;
+  gitHeads?: Record<string, string>;
 }
 export const emptyPackage: PackageData = {
   packageName: "",
@@ -122,6 +123,12 @@ export function normalizePackage(
   return {
     packageName: text(data.name) || requestedName,
     versions,
+    gitHeads: Object.fromEntries(
+      versions.flatMap((version) => {
+        const sha = text(record(data.versions[version]).gitHead);
+        return /^[0-9a-f]{40}$/i.test(sha) ? [[version, sha]] : [];
+      }),
+    ),
     latestVersion,
     repository,
     githubUrl: repository?.url || "",

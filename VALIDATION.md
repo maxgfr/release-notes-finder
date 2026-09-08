@@ -14,7 +14,7 @@ Additional tests cover late release responses, closed tabs, overlapping history 
 
 ## Measurements
 
-The initial build before changes reported 249.75 kB gzip for the main JavaScript. After adding the features, the main script is approximately 181 kB gzip, about 28% smaller. The Markdown parser/renderer is deferred until a notes view is opened. Its additional chunks mean total downloaded code after opening notes is larger than the initial download; only the initial JavaScript is subject to the 250,000-byte regression budget.
+The initial build before changes reported 249.75 kB gzip for the main JavaScript. After adding the features, the main script is approximately 182 kB gzip, about 27% smaller. The Markdown parser/renderer is deferred until a notes view is opened. Its additional chunks mean total downloaded code after opening notes is larger than the initial download; only the initial JavaScript is subject to the 250,000-byte regression budget.
 
 Three fresh-page samples with 10,000 published versions, identical JSON fixtures, no network latency simulation and desktop Chromium:
 
@@ -32,7 +32,7 @@ The cache test asserts one HTTP request for overlapping and repeated reads, anot
 
 ## Automated results
 
-35 Jest tests and 20 desktop/mobile Playwright scenarios passed. TypeScript, the production build and the initial JavaScript budget check passed.
+44 Jest tests and 30 desktop/mobile Playwright scenarios passed. TypeScript, the production build and the initial JavaScript budget check passed.
 
 ## Pre-push revalidation
 
@@ -40,7 +40,7 @@ The full suite is invoked with `CI=true yarn validate`. The script was renamed f
 
 ## Browser coverage
 
-Desktop and mobile Chromium scenarios exercise keyboard autocomplete, history removal, filters, prereleases, opening/closing tabs, source links, Unicode changelogs, both comparison views, stop/resume/batching, partial failure recovery, quota recovery, optional tokens, clipboard sharing, browser navigation, invalid links, empty packages, dark mode and 10,000-version pagination. Markdown fixtures contain script, iframe and unsafe-link attempts.
+Desktop and mobile Chromium scenarios exercise keyboard autocomplete, history removal, filters, prereleases, opening/closing tabs, source links, Unicode changelogs, both comparison views, stop/resume/full-interval loading, partial failure recovery, quota recovery, optional tokens, clipboard sharing, browser navigation, invalid links, empty packages, Auto/Light/Dark selection, live system-theme changes, persisted manual overrides and 10,000-version pagination. Markdown fixtures contain script, iframe and unsafe-link attempts.
 
 Local real-service smoke checks successfully loaded React 18.2.0, @babel/core 7.24.7 and Next.js 14.2.0 release notes, with no browser exceptions. Real-service checks are separate from deterministic CI tests.
 
@@ -50,3 +50,9 @@ Local real-service smoke checks successfully loaded React 18.2.0, @babel/core 7.
 - Visual inspection covered desktop/mobile comparison layouts and themes; this is not a WCAG conformance certification.
 - GitHub Actions, CodeQL and publication require a remote workflow run; local validation alone does not establish their outcome.
 - The existing Create React App toolchain still reports dependency/compatibility deprecation notices. No framework migration was included.
+
+## Auto theme and interval comparison
+
+A new browser regression test failed on the previous build: comparing seven intervening versions fetched only five releases. It now fetches all seven, excludes the starting version and includes the target version. The default comparison also presents repository commits and files, with unit coverage for npm commit references, scoped tag fallback, pagination, file-list limits and non-linear histories.
+
+A live comparison of React 18.0.0 → 18.2.0 loaded the intermediate release notes and returned 180 repository commits plus the capped file list, without browser exceptions. The UI flags the repository scope and file-list cap.

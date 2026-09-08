@@ -10,13 +10,18 @@ Browse npm package versions and their GitHub release notes, or read the changes 
 - SemVer sorting, text and major/minor/patch filters, latest per major, and optional prereleases. Lists show 50 versions per page.
 - Release-note tabs, a package information panel, and an on-demand changelog reader.
 - Repository detection for HTTPS, SSH and GitHub shorthand, including scoped packages and monorepo directories.
-- **Upgrade notes**: published notes for versions greater than A and less than or equal to B, oldest first.
-- **Side by side**: notes for A and B, displayed in columns on desktop and stacked on mobile.
-- Comparisons load five versions at a time. Stop, continue, or retry unfinished entries without fetching successful entries again.
+- **Changes between versions** (default): commits and changed files between the published Git references, followed by every release note for versions greater than A and less than or equal to B, oldest first.
+- **Release notes only**: the full published-note timeline, without the repository comparison.
+- **Endpoint notes side by side**: notes for A and B, displayed in columns on desktop and stacked on mobile.
+- Release notes load automatically through the whole interval. Stop or resume whenever needed; errors and GitHub quotas remain explicit. Successful entries are reused on retry.
 - Shareable package, version and comparison links; browser back/forward support.
-- An English interface, light/dark themes, labeled controls and keyboard-accessible actions.
+- An English interface, Auto/Light/Dark themes, labeled controls and keyboard-accessible actions. Auto follows system changes immediately; manual choices override the system and persist across reloads.
 
 Selecting a version opens a tab without switching away from the version list. Select the tab to read its notes.
+
+### Themes
+
+Use the **Color theme** selector in the header. **Auto** is the default for new visitors and follows the operating system, including changes while the app is open. Existing light/dark preferences are preserved. Theme selection is stored locally, independently of GitHub access.
 
 ### GitHub access
 
@@ -30,11 +35,12 @@ Existing `?q=react` links remain supported:
 
 ```text
 ?q=react&version=18.2.0
+?q=react&from=18.0.0&to=18.2.0&view=changes
 ?q=react&from=18.0.0&to=18.2.0&view=range
 ?q=react&from=18.0.0&to=18.2.0&view=side-by-side&prereleases=1
 ```
 
-When comparison parameters are present, they take precedence over `version`. Invalid selections display guidance. The target must be newer than the starting version. Prereleases are excluded by default from intermediate versions; an explicitly selected prerelease endpoint is always included.
+`view=changes` is the default when no recognized view is specified. Existing `view=range` and `view=side-by-side` links keep their meaning. When comparison parameters are present, they take precedence over `version`. Invalid selections display guidance. The target must be newer than the starting version. Prereleases are excluded by default from intermediate versions; an explicitly selected prerelease endpoint is always included.
 
 ### Cache and content
 
@@ -84,7 +90,11 @@ The application remains a static React/Chakra UI app built with Create React App
 
 Release naming differs between projects. The resolver tries `vVERSION`, `VERSION`, `PACKAGE@VERSION`, and the unscoped package form. It remembers successful conventions during the session; it cannot infer every custom tag scheme. Changelog lookup checks `CHANGELOG.md`, `changelog.md`, `CHANGES.md` and `HISTORY.md` in the package directory, then the repository root. Very large files may require opening GitHub directly.
 
-Comparisons show the original published notes, not a generated summary or a complete commit diff. Missing or empty notes are explicitly marked. Private registries, OAuth and a backend are outside this implementation.
+Comparisons show original release notes and GitHub commit/file data, without generating a summary. Git references come from npm publishing commit SHAs when available, otherwise resolved release tags. Monorepo Git comparisons cover the whole repository and may include other packages; this is labeled explicitly. Missing notes or references do not imply that nothing changed.
+
+Commit results load 100 at a time. GitHub exposes at most 300 changed files for a comparison; reaching that cap displays an incompleteness notice. Use **View full diff on GitHub** to inspect the code diff. Diverged histories and identical references are identified rather than presented as a straight upgrade. See the [GitHub comparison API documentation](https://docs.github.com/en/rest/commits/commits#compare-two-commits).
+
+Private registries, OAuth and a backend are outside this implementation.
 
 See [validation and performance measurements](VALIDATION.md).
 

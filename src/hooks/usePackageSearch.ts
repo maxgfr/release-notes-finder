@@ -8,6 +8,7 @@ import {
 } from "../domain/package";
 import { ApiClient, errorMessage, isAbort } from "../services/client";
 import { Changelog, ReleaseNotes, ReleaseService } from "../services/releases";
+import { ComparisonService, CompareLoader } from "../services/comparison";
 export type Resource<T> = {
   status: "idle" | "loading" | "success" | "error";
   data?: T;
@@ -16,6 +17,7 @@ export type Resource<T> = {
 export function usePackageSearch() {
   const [client] = useState(() => new ApiClient());
   const [service] = useState(() => new ReleaseService(client));
+  const [comparisons] = useState(() => new ComparisonService(client, service));
   const [packageData, setPackageData] = useState<PackageData>(emptyPackage);
   const [packageStatus, setPackageStatus] = useState<Resource<PackageData>>({
     status: "idle",
@@ -200,6 +202,12 @@ export function usePackageSearch() {
     },
     [service],
   );
+  const compareVersions: CompareLoader = useCallback(
+    (from, to, signal, page, refs) => {
+      return comparisons.compare(pkgRef.current, from, to, signal, page, refs);
+    },
+    [comparisons],
+  );
   const setGithubToken = useCallback(
     (token: string) => {
       invalidate();
@@ -216,6 +224,7 @@ export function usePackageSearch() {
     changelog,
     searchPackage,
     loadRelease,
+    compareVersions,
     fetchVersionReleaseNotes,
     closeVersionTab,
     loadChangelog,
