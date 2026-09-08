@@ -1,16 +1,20 @@
 {
   "files": {
-    "main.js": "/release-notes-finder/static/js/main.12e00e23.js",
+    "main.js": "/release-notes-finder/static/js/main.fc330deb.js",
+    "static/js/156.c521485e.chunk.js": "/release-notes-finder/static/js/156.c521485e.chunk.js",
     "static/js/426.6d0ab1d4.chunk.js": "/release-notes-finder/static/js/426.6d0ab1d4.chunk.js",
     "static/js/787.b872ca38.chunk.js": "/release-notes-finder/static/js/787.b872ca38.chunk.js",
     "static/js/508.6278491c.chunk.js": "/release-notes-finder/static/js/508.6278491c.chunk.js",
+    "static/js/654.1fac3527.chunk.js": "/release-notes-finder/static/js/654.1fac3527.chunk.js",
     "index.html": "/release-notes-finder/index.html",
-    "main.12e00e23.js.map": "/release-notes-finder/static/js/main.12e00e23.js.map",
+    "main.fc330deb.js.map": "/release-notes-finder/static/js/main.fc330deb.js.map",
+    "156.c521485e.chunk.js.map": "/release-notes-finder/static/js/156.c521485e.chunk.js.map",
     "426.6d0ab1d4.chunk.js.map": "/release-notes-finder/static/js/426.6d0ab1d4.chunk.js.map",
     "787.b872ca38.chunk.js.map": "/release-notes-finder/static/js/787.b872ca38.chunk.js.map",
-    "508.6278491c.chunk.js.map": "/release-notes-finder/static/js/508.6278491c.chunk.js.map"
+    "508.6278491c.chunk.js.map": "/release-notes-finder/static/js/508.6278491c.chunk.js.map",
+    "654.1fac3527.chunk.js.map": "/release-notes-finder/static/js/654.1fac3527.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/main.12e00e23.js"
+    "static/js/main.fc330deb.js"
   ]
 }
