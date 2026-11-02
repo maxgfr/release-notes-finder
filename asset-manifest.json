@@ -1,20 +1,20 @@
 {
   "files": {
-    "main.js": "/release-notes-finder/static/js/main.85544ff6.js",
-    "static/js/156.c521485e.chunk.js": "/release-notes-finder/static/js/156.c521485e.chunk.js",
-    "static/js/426.6d0ab1d4.chunk.js": "/release-notes-finder/static/js/426.6d0ab1d4.chunk.js",
-    "static/js/787.b872ca38.chunk.js": "/release-notes-finder/static/js/787.b872ca38.chunk.js",
-    "static/js/508.6278491c.chunk.js": "/release-notes-finder/static/js/508.6278491c.chunk.js",
-    "static/js/654.1fac3527.chunk.js": "/release-notes-finder/static/js/654.1fac3527.chunk.js",
+    "main.js": "/release-notes-finder/static/js/main.f677316a.js",
+    "static/js/268.9743a0ff.chunk.js": "/release-notes-finder/static/js/268.9743a0ff.chunk.js",
+    "static/js/83.208781ef.chunk.js": "/release-notes-finder/static/js/83.208781ef.chunk.js",
+    "static/js/453.b1d4795e.chunk.js": "/release-notes-finder/static/js/453.b1d4795e.chunk.js",
+    "static/js/919.e7ca0453.chunk.js": "/release-notes-finder/static/js/919.e7ca0453.chunk.js",
+    "static/js/39.d3cddf20.chunk.js": "/release-notes-finder/static/js/39.d3cddf20.chunk.js",
     "index.html": "/release-notes-finder/index.html",
-    "main.85544ff6.js.map": "/release-notes-finder/static/js/main.85544ff6.js.map",
-    "156.c521485e.chunk.js.map": "/release-notes-finder/static/js/156.c521485e.chunk.js.map",
-    "426.6d0ab1d4.chunk.js.map": "/release-notes-finder/static/js/426.6d0ab1d4.chunk.js.map",
-    "787.b872ca38.chunk.js.map": "/release-notes-finder/static/js/787.b872ca38.chunk.js.map",
-    "508.6278491c.chunk.js.map": "/release-notes-finder/static/js/508.6278491c.chunk.js.map",
-    "654.1fac3527.chunk.js.map": "/release-notes-finder/static/js/654.1fac3527.chunk.js.map"
+    "main.f677316a.js.map": "/release-notes-finder/static/js/main.f677316a.js.map",
+    "268.9743a0ff.chunk.js.map": "/release-notes-finder/static/js/268.9743a0ff.chunk.js.map",
+    "83.208781ef.chunk.js.map": "/release-notes-finder/static/js/83.208781ef.chunk.js.map",
+    "453.b1d4795e.chunk.js.map": "/release-notes-finder/static/js/453.b1d4795e.chunk.js.map",
+    "919.e7ca0453.chunk.js.map": "/release-notes-finder/static/js/919.e7ca0453.chunk.js.map",
+    "39.d3cddf20.chunk.js.map": "/release-notes-finder/static/js/39.d3cddf20.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/main.85544ff6.js"
+    "static/js/main.f677316a.js"
   ]
 }
