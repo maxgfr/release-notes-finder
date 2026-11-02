@@ -135,9 +135,16 @@ function checkValidServiceWorker(swUrl: string, config?: Config) {
 
 export function unregister() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.ready
-      .then((registration) => {
-        registration.unregister()
+    // Every project page of maxgfr.github.io shares one origin: `ready` would hand back the worker of
+    // another site whose scope covers this page (one registered at "/"), and unregister it. Only a
+    // worker scoped to this app's own path is ours to remove.
+    const ownScope = new URL(`${process.env.PUBLIC_URL}/`, window.location.href).href
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) => {
+        for (const registration of registrations) {
+          if (registration.scope.startsWith(ownScope)) registration.unregister()
+        }
       })
       .catch((error) => {
         console.error(error.message)
